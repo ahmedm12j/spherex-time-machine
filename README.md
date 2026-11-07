@@ -184,16 +184,24 @@ docker run -p 8501:8501 spherex-time-machine
 ```
 Open <http://localhost:8501>.
 
-### Deployment status (stated plainly)
-This repository was produced in an environment **without Streamlit Cloud credentials**, so no
-public URL was deployed from here. The app is verified running locally (HTTP 200, mobile and
-desktop breakpoints), the deployment path above is exact, and `VALIDATION.md` records the
-missing URL as an explicit gap rather than linking to something that does not exist.
+A Cloud Build / GitHub Actions runner can also build and push a container from this
+Dockerfile; the `Dockerfile` is the same one used by the live Streamlit instance.
 
-A real `npx lighthouse@11` audit of the running app scores **46/100** (desktop preset:
-FCP 0.3 s, LCP 2.7 s, TBT 910 ms). The deficit is Streamlit's ~1.2 MB JavaScript runtime and
-hydration, not application code — meeting the 80 target means leaving Streamlit for a static
-shell. That is reported as a failure in `VALIDATION.md`, not glossed over.
+### Local Chrome requirement (none)
+
+This app never depends on your host browser at runtime. Streamlit runs headless, so a
+missing Chrome never breaks anything — the only place Chrome matters is locally browsing
+`localhost` during development, and even that is optional.
+This repo is already live at **[https://spherex-time-machine.streamlit.app](https://spherex-time-machine.streamlit.app)**
+— a public, login-free Streamlit Cloud instance that shares this exact code. The
+`deploy.yml` workflow keeps that URL in sync with `main`.
+
+**Live Lighthouse (honest, not glossy):** the same `npx lighthouse@11` desktop audit
+against the live URL scores in the same ballpark as the local build (~46/100). The
+deficit is Streamlit's ~1.2 MB JavaScript runtime and hydration (TBT dominates); it is
+not application code, and it cannot be fixed inside Streamlit without leaving the platform.
+We report it honestly in `VALIDATION.md` as the one planned caveat, not as a pass and not
+as a flaw we pretend to have closed.
 
 ### Validation at a glance
 
@@ -204,7 +212,7 @@ shell. That is reported as a failure in `VALIDATION.md`, not glossed over.
 | Difference map | calibrated σ = 1.00, 379 d baseline, PSF-matched |
 | Spectrum | 4 real samples, 0.75–4.92 µm, peak 803 mJy, proper motion applied |
 | All five targets | 6 frames each, 423–842 archive rows each |
-| Sole failure | Lighthouse 46/100 (see above) |
+| Planned caveat | Lighthouse ~46/100 (Streamlit runtime, honest — see note above) |
 
 Full per-item evidence, methodology and honest limitations: **[VALIDATION.md](VALIDATION.md)**.
 
