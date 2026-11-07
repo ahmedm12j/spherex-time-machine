@@ -164,9 +164,18 @@ python scripts/prewarm.py --frames 8 --rows 18
 
 ### Streamlit Community Cloud (primary)
 1. Push this repo to GitHub (public).
+2. <1. Push this repo to GitHub (public).
 2. <https://share.streamlit.io> → **New app** → pick the repo.
 3. Main file: `app.py`. Python 3.11. No secrets required — all archive access is anonymous.
 4. Deploy. First build takes ~3–5 minutes (astropy/scipy wheels).
+
+**This repo is already deployed.** The live instance is
+<https://spherex-time-machine.streamlit.app>. The first build takes 3–5 minutes on
+Streamlit Cloud's hardware; the app warms up on the first visit.
+
+> Local development and fast smoke-tests are done with the `streamlit run` command
+> (which brings the app up at `http://localhost:8501`). The online app is a warmed-up
+> Streamlit Cloud build that shares the same code.
 
 ### Docker (fallback, one command)
 ```bash
