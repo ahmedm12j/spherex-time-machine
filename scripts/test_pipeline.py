@@ -50,7 +50,7 @@ def main() -> int:
     spec = photometry.extract_spectrum(res.epochs, RA, DEC, max_rows=6)
     print(f"[6] spectrum points={len(spec.points)} t={time.time()-t0:.1f}s msg={spec.message}")
     for p in spec.sorted()[:6]:
-        print(f"    λ={p.wavelength_um:.3f} flux={p.flux_mjy:.3f} mJy snr={p.snr:.1f} D{p.detector}")
+        print(f"    wavelength={p.wavelength_um:.3f} flux={p.flux_mjy:.3f} mJy snr={p.snr:.1f} D{p.detector}")
     return 0
 
 
