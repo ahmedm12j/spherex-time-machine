@@ -1,0 +1,64 @@
+{
+  "target": "WISE 0855",
+  "slug": "wise_0855",
+  "ra_deg": 133.795129,
+  "dec_deg": -7.245147,
+  "generated": "2026-11-07T07:01:37Z",
+  "n_points": 6,
+  "points": [
+    {
+      "wavelength_um": 0.99285,
+      "flux_mjy": 0.163887,
+      "err_mjy": 0.092375,
+      "snr": 1.77,
+      "detector": 1,
+      "obs_id": "2025W19_1B_0241_1",
+      "mjd": 60801.5142
+    },
+    {
+      "wavelength_um": 1.51526,
+      "flux_mjy": 0.11453,
+      "err_mjy": 0.084439,
+      "snr": 1.36,
+      "detector": 2,
+      "obs_id": "2025W19_1B_0181_1",
+      "mjd": 60801.1066
+    },
+    {
+      "wavelength_um": 2.36327,
+      "flux_mjy": 0.074322,
+      "err_mjy": 0.072266,
+      "snr": 1.03,
+      "detector": 3,
+      "obs_id": "2025W19_1B_0116_1",
+      "mjd": 60800.7
+    },
+    {
+      "wavelength_um": 3.35863,
+      "flux_mjy": 0.139545,
+      "err_mjy": 0.079891,
+      "snr": 1.75,
+      "detector": 4,
+      "obs_id": "2025W19_1B_0241_1",
+      "mjd": 60801.5142
+    },
+    {
+      "wavelength_um": 4.28873,
+      "flux_mjy": 0.849206,
+      "err_mjy": 0.213231,
+      "snr": 3.98,
+      "detector": 5,
+      "obs_id": "2025W19_1B_0181_1",
+      "mjd": 60801.1066
+    },
+    {
+      "wavelength_um": 4.9609,
+      "flux_mjy": 0.734568,
+      "err_mjy": 0.421444,
+      "snr": 1.74,
+      "detector": 6,
+      "obs_id": "2025W19_1B_0116_1",
+      "mjd": 60800.7
+    }
+  ]
+}

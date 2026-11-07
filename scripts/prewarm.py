@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from spherex import archive, config, photometry, pipeline  # noqa: E402
+from spherex import archive, catalogs, config, photometry, pipeline  # noqa: E402
 
 
 def main() -> int:
@@ -56,8 +56,10 @@ def main() -> int:
         seq_time = time.time() - t0
         print(f"  frames={len(seq)} in {seq_time:.1f}s notes={seq.notes}")
 
+        pm = catalogs.nearest_proper_motion(ra, dec)
+        print(f"  proper motion: {pm}")
         t0 = time.time()
-        spec = photometry.extract_spectrum(res.epochs, ra, dec, max_rows=args.rows)
+        spec = photometry.extract_spectrum(res.epochs, ra, dec, max_rows=args.rows, pm=pm)
         spec_time = time.time() - t0
         print(f"  spectrum points={len(spec.points)} in {spec_time:.1f}s")
 

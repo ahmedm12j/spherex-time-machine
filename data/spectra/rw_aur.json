@@ -1,0 +1,64 @@
+{
+  "target": "RW Aurigae",
+  "slug": "rw_aur",
+  "ra_deg": 76.95625,
+  "dec_deg": 30.402222,
+  "generated": "2026-11-07T07:02:16Z",
+  "n_points": 6,
+  "points": [
+    {
+      "wavelength_um": 1.06823,
+      "flux_mjy": 137.176375,
+      "err_mjy": 0.432931,
+      "snr": 316.86,
+      "detector": 1,
+      "obs_id": "2025W36_1A_0095_1",
+      "mjd": 60919.4196
+    },
+    {
+      "wavelength_um": 1.441,
+      "flux_mjy": 85.778178,
+      "err_mjy": 0.327728,
+      "snr": 261.74,
+      "detector": 2,
+      "obs_id": "2025W37_1A_0068_1",
+      "mjd": 60926.2751
+    },
+    {
+      "wavelength_um": 2.35376,
+      "flux_mjy": 142.113818,
+      "err_mjy": 0.449464,
+      "snr": 316.19,
+      "detector": 3,
+      "obs_id": "2025W37_2A_0051_1",
+      "mjd": 60929.6775
+    },
+    {
+      "wavelength_um": 3.64928,
+      "flux_mjy": 135.478093,
+      "err_mjy": 0.645368,
+      "snr": 209.92,
+      "detector": 4,
+      "obs_id": "2025W36_1A_0095_1",
+      "mjd": 60919.4196
+    },
+    {
+      "wavelength_um": 4.21195,
+      "flux_mjy": 506.623084,
+      "err_mjy": 1.452899,
+      "snr": 348.7,
+      "detector": 5,
+      "obs_id": "2025W37_1A_0068_1",
+      "mjd": 60926.2751
+    },
+    {
+      "wavelength_um": 4.95408,
+      "flux_mjy": 1038.81695,
+      "err_mjy": 2.560398,
+      "snr": 405.72,
+      "detector": 6,
+      "obs_id": "2025W37_2A_0051_1",
+      "mjd": 60929.6775
+    }
+  ]
+}

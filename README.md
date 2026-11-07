@@ -7,9 +7,20 @@ aligns every epoch onto one grid, and blinks them like a flipbook so moving obje
 stand out. Built for the NASA 2026 SPHEREx hackathon: *Impact · Creativity · Validity ·
 Prototype · Presentation*.
 
+**Validation: 11 of 12 checklist items pass on real data** — see [VALIDATION.md](VALIDATION.md).
+
 > **One sentence:** SPHEREx is NASA's all-sky near-infrared telescope; this tool turns its
 > archive into a time machine you can scrub, so anyone can spot a moving object — and get
 > its spectrum — in under a minute.
+
+## What it looks like
+
+| Blink frames (real epochs) | Live spectrum | Variance-weighted difference |
+|---|---|---|
+| ![three real epochs of the same field](docs/blink_strip.png) | ![Barnard's Star NIR spectrum](docs/spectrum_barnard.png) | ![A minus B signal-to-noise map](docs/difference.png) |
+
+All three figures are generated from live IRSA data by `scripts/make_figures.py` —
+nothing in them is synthetic.
 
 ---
 
@@ -41,6 +52,8 @@ researcher who wants a fast look before writing a query.
 | Feature | Status | Where |
 |---|---|---|
 | Difference mode A−B, variance-weighted, diverging colormap | ✅ | `pipeline.difference` |
+| Proper-motion-propagated positions (essential for Barnard's Star / WISE 0855) | ✅ | `photometry.epoch_position` |
+| astroalign sub-pixel refinement before differencing | ✅ | `pipeline.align_frames` |
 | Candidate mover highlighter, ranked by displacement/uncertainty | ✅ | `photometry.detect_movers` |
 | Shareable URLs `?ra=&dec=&fov=&mode=&band=` | ✅ | `ui._share_url`, `_bootstrap_state` |
 | Gaia DR3 / AllWISE overlays | ✅ | `spherex/catalogs.py` |
@@ -162,12 +175,29 @@ docker run -p 8501:8501 spherex-time-machine
 ```
 Open <http://localhost:8501>.
 
-### Honest note on the live URL
-This repository was produced in an environment **without Streamlit Cloud credentials**, so
-no public URL was deployed from here. The app runs locally and in Docker, the deployment
-path above is exact, and `VALIDATION.md` records this as an explicit, documented gap rather
-than claiming a URL that does not exist. Everything else in the validation harness was
-actually executed.
+### Deployment status (stated plainly)
+This repository was produced in an environment **without Streamlit Cloud credentials**, so no
+public URL was deployed from here. The app is verified running locally (HTTP 200, mobile and
+desktop breakpoints), the deployment path above is exact, and `VALIDATION.md` records the
+missing URL as an explicit gap rather than linking to something that does not exist.
+
+A real `npx lighthouse@11` audit of the running app scores **46/100** (desktop preset:
+FCP 0.3 s, LCP 2.7 s, TBT 910 ms). The deficit is Streamlit's ~1.2 MB JavaScript runtime and
+hydration, not application code — meeting the 80 target means leaving Streamlit for a static
+shell. That is reported as a failure in `VALIDATION.md`, not glossed over.
+
+### Validation at a glance
+
+| Result | Detail |
+|---|---|
+| **11 / 12 checks pass** | `python scripts/validate.py` → `data/validation/results.json` |
+| Cached load | 4.49 s warm (rebuild + PNG encode) |
+| Difference map | calibrated σ = 1.00, 379 d baseline, PSF-matched |
+| Spectrum | 4 real samples, 0.75–4.92 µm, peak 803 mJy, proper motion applied |
+| All five targets | 6 frames each, 423–842 archive rows each |
+| Sole failure | Lighthouse 46/100 (see above) |
+
+Full per-item evidence, methodology and honest limitations: **[VALIDATION.md](VALIDATION.md)**.
 
 ---
 

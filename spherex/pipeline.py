@@ -126,12 +126,14 @@ def _combine_epoch(cuts: list[Cutout], ref: WCS, shape: tuple[int, int]) -> Fram
         img = cut.image.astype(np.float32)
         img = np.where(cut.mask, np.nan, img)
         data, foot = _reproject(img, cut.wcs, ref, shape)
-        mask_f, _ = _reproject(cut.mask.astype(np.float32), cut.wcs, ref, shape)
         var = cut.variance if cut.variance is not None else np.ones_like(img)
         var = np.where(np.isfinite(var) & (var > 0), var, np.nan)
         var_f, _ = _reproject(var.astype(np.float32), cut.wcs, ref, shape)
 
-        ok = (foot > 0) & np.isfinite(data) & (mask_f < 0.5)
+        # Contaminated pixels were already set to NaN, so the reprojected
+        # footprint plus finite-data test is a sufficient good-pixel mask and
+        # spares a third full reprojection per detector.
+        ok = (foot > 0) & np.isfinite(data)
         if not np.any(ok):
             continue
         weight = np.where(ok & np.isfinite(var_f) & (var_f > 0), 1.0 / var_f, 0.0)
@@ -187,6 +189,56 @@ def _combine_epoch(cuts: list[Cutout], ref: WCS, shape: tuple[int, int]) -> Fram
     )
 
 
+def align_frames(frames: list[Frame], max_shift: float = 4.0) -> list[Frame]:
+    """Refine sub-pixel alignment with astroalign.
+
+    Reprojection onto a common WCS removes most of the pointing difference, but
+    a residual sub-pixel offset still produces symmetric ring residuals around
+    every star in a difference image.  astroalign measures that residual from
+    the star pattern itself and warps the frame onto the deepest epoch.
+    """
+    if len(frames) < 2:
+        return frames
+    try:
+        import astroalign
+        from skimage.transform import warp
+    except Exception:
+        return frames
+
+    ref_idx = int(np.argmax([float(f.valid.mean()) for f in frames]))
+    ref = frames[ref_idx]
+    fill = float(np.nanmedian(ref.data[np.isfinite(ref.data)])) if np.any(np.isfinite(ref.data)) else 0.0
+    ref_img = np.nan_to_num(ref.data, nan=fill)
+
+    for i, f in enumerate(frames):
+        if i == ref_idx:
+            continue
+        try:
+            img = np.nan_to_num(f.data, nan=fill)
+            # Solve the transform on a 2x-binned image: the star pattern is
+            # identical but triangle matching costs a quarter of the time.
+            small = img[::2, ::2]
+            ref_small = ref_img[::2, ::2]
+            tf, _ = astroalign.find_transform(small, ref_small, max_control_points=35)
+            shift = float(np.hypot(*tf.translation)) * 2.0
+            if shift > max_shift or shift < 1e-3:
+                continue
+            scaled = tf.__class__(
+                tf.rotation, tf.scale, tf.translation * 2.0, tf.src, tf.dst
+            )
+            warped = warp(f.data, inverse_map=scaled.inverse, preserve_range=True,
+                          cval=np.nan, order=1)
+            var_w = warp(np.nan_to_num(f.variance, nan=0.0), inverse_map=scaled.inverse,
+                         preserve_range=True, cval=0.0, order=1)
+            f.data = np.asarray(warped, dtype=np.float32)
+            f.variance = np.asarray(var_w, dtype=np.float32)
+            f.valid = np.isfinite(f.data)
+            f.meta["astroalign_shift_px"] = round(shift, 3)
+        except Exception:
+            continue
+    return frames
+
+
 def _global_stretch(frames: list[Frame]) -> tuple[float, float]:
     vals = np.concatenate([f.data[np.isfinite(f.data)].ravel()[::7] for f in frames if np.any(np.isfinite(f.data))])
     if vals.size < 10:
@@ -211,8 +263,12 @@ def build_sequence(
     progress=None,
 ) -> Sequence:
     """Assemble a blink sequence.  Returns an empty Sequence instead of raising."""
-    ref = reference_wcs(ra, dec, fov_deg)
-    shape = (config.DISPLAY_PX, config.DISPLAY_PX)
+    # Work at the native pixel scale: reprojecting a 512x512 grid from a ~293x293
+    # cutout triples the cost for no extra information.  The display step upsamples.
+    n = int(round(fov_deg * 3600.0 / config.PIXEL_SCALE_ARCSEC))
+    n = max(64, min(n, config.MAX_CUTOUT_PX))
+    ref = reference_wcs(ra, dec, fov_deg, n)
+    shape = (n, n)
     notes: list[str] = []
 
     cand = [e for e in epochs if e.covers(ra, dec)]
@@ -220,6 +276,22 @@ def build_sequence(
         cand = [e for e in cand if e.detector == detector]
     if not cand:
         return Sequence([], ref, shape, fov_deg, ra, dec, mode, notes=["no epochs cover this position"])
+
+    # Prefer epochs whose detector footprint contains the *whole* requested FOV.
+    # Near a detector edge only part of the frame exists, which shows up as a black
+    # band in the blink and makes differencing unreliable.
+    def _full_coverage(e) -> bool:
+        d = fov_deg * 0.5
+        d_ra = d / max(math.cos(math.radians(dec)), 0.1)
+        return all(e.covers(ra + dx, dec + dy)
+                   for dx, dy in ((0, d), (0, -d), (d_ra, 0), (-d_ra, 0)))
+
+    try:
+        full = [e for e in cand if _full_coverage(e)]
+        if len({e.obs_id for e in full}) >= 3:
+            cand = full
+    except Exception:
+        pass
 
     by_obs: dict[str, list[Epoch]] = {}
     for ep in sorted(cand, key=lambda e: e.t_min):
@@ -281,6 +353,7 @@ def build_sequence(
         frames.append(frame)
 
     frames.sort(key=lambda f: f.t_min)
+    frames = align_frames(frames)
     for i, f in enumerate(frames):
         dets = "+".join(f"D{d}" for d in f.detectors)
         f.label = f"{f.iso}  {dets}"
@@ -326,6 +399,12 @@ def difference(
             da = _gauss_smooth(da, math.sqrt(max(fwhm_b**2 - fwhm_a**2, 0.1)))
 
     diff = da - db
+    # Remove the global zero-point difference between epochs (different arrays or
+    # photometric conditions otherwise shift the whole frame and the S/N map sits
+    # off-centre).  A genuine moving source is unaffected by a constant offset.
+    finite_diff = diff[np.isfinite(diff)]
+    if finite_diff.size > 100:
+        diff = diff - float(np.median(finite_diff))
     va = np.where(np.isfinite(a.variance) & (a.variance > 0), a.variance, np.nan)
     vb = np.where(np.isfinite(b.variance) & (b.variance > 0), b.variance, np.nan)
     if psf_match:
@@ -349,6 +428,9 @@ def difference(
         med, sigma_emp = 0.0, 1.0
     sigma_emp = sigma_emp if np.isfinite(sigma_emp) and 0.05 < sigma_emp < 100 else 1.0
     snr_cal = snr / sigma_emp
+    cal_finite = snr_cal[np.isfinite(snr_cal)]
+    sigma_cal = (float(1.4826 * np.median(np.abs(cal_finite - np.median(cal_finite))))
+                 if cal_finite.size > 100 else 1.0)
     stats = {
         "median": med,
         "std": float(np.std(finite)) if finite.size else 0.0,
@@ -356,6 +438,7 @@ def difference(
         if finite.size else 0.0,
         "n_pix": int(finite.size),
         "sigma_emp": sigma_emp,
+        "sigma_cal": sigma_cal,
         "label": f"{a.iso}  −  {b.iso}",
         "dt_days": (a.t_min - b.t_min),
     }
@@ -407,18 +490,22 @@ def to_u8(
     return rgba
 
 
-def png_b64(rgba: np.ndarray) -> str:
+def png_b64(rgba: np.ndarray, size: int | None = None) -> str:
     import base64
 
     from PIL import Image
 
+    img = Image.fromarray(rgba, mode="RGBA")
+    if size and img.height != size:
+        img = img.resize((size, size), Image.BILINEAR)
     buf = io.BytesIO()
-    Image.fromarray(rgba, mode="RGBA").save(buf, format="PNG", optimize=True)
+    img.save(buf, format="PNG", compress_level=1)
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def encode_frames(seq: Sequence, cmap: str = "viridis", gamma: float = 1.0) -> list[str]:
-    """PNG data-URIs for the JS blink viewer."""
+def encode_frames(seq: Sequence, cmap: str = "viridis", gamma: float = 1.0,
+                  size: int = config.DISPLAY_PX) -> list[str]:
+    """PNG data-URIs for the JS blink viewer (512x512 display canvas)."""
     out: list[str] = []
     for f in seq.frames:
         arr = f.data.astype(np.float64)
@@ -426,7 +513,7 @@ def encode_frames(seq: Sequence, cmap: str = "viridis", gamma: float = 1.0) -> l
             lo, hi = seq.vmin, seq.vmax
             norm = np.clip((arr - lo) / (hi - lo + 1e-12), 1e-6, 1.0) ** gamma
             arr = lo + norm * (hi - lo)
-        out.append(png_b64(to_u8(arr, seq.vmin, seq.vmax, cmap)))
+        out.append(png_b64(to_u8(arr, seq.vmin, seq.vmax, cmap), size=size))
     return out
 
 

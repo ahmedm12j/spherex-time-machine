@@ -53,31 +53,59 @@ class SpectrumResult:
 
 def _aperture_flux(
     image: np.ndarray, variance: np.ndarray | None, flags: np.ndarray | None,
-    cx: float, cy: float, r_in: float = 3.0, r_out: float = 7.0,
+    cx: float, cy: float, r_in: float, r_out: float,
 ) -> tuple[float, float, int, int]:
-    """Aperture sum with a local annulus background, in MJy/sr x pixels."""
+    """Aperture sum with a local annulus background, in MJy/sr x pixels.
+
+    Contaminated pixels inside the aperture are excluded and the sum is scaled
+    by the inverse of the surviving area fraction (standard aperture correction),
+    so a bright star whose core is flagged OVERFLOW still yields a flux estimate
+    instead of a hole.
+    """
     ny, nx = image.shape
     yy, xx = np.mgrid[0:ny, 0:nx]
     rr = np.hypot(xx - cx, yy - cy)
     good = np.isfinite(image)
     if flags is not None:
         good &= fitsdata.contamination_mask(flags) == False  # noqa: E712
-    ap = (rr <= r_in) & good
+    ap_all = rr <= r_in
+    ap = ap_all & good
     an = (rr >= r_in) & (rr <= r_out) & good
+    n_all = int(ap_all.sum())
     npix_ap = int(ap.sum())
-    if npix_ap < 1 or an.sum() < 5:
+    if n_all < 1 or npix_ap < 1 or an.sum() < 5:
         return float("nan"), float("nan"), npix_ap, 0
     bkg = float(np.median(image[an]))
-    total = float(np.nansum(image[ap] - bkg))
+    frac = max(npix_ap / n_all, 0.25)
+    total = float(np.nansum(image[ap] - bkg)) / frac
     if variance is not None:
         v = np.where(np.isfinite(variance) & (variance > 0), variance, np.nan)
-        err = float(np.sqrt(np.nansum(np.where(ap, v, 0.0))))
+        err = float(np.sqrt(np.nansum(np.where(ap, v, 0.0)))) / frac
     else:
-        err = float(np.nanstd(image[an]) * math.sqrt(npix_ap))
+        err = float(np.nanstd(image[an]) * math.sqrt(npix_ap)) / frac
     return total, err, npix_ap, int(an.sum())
 
 
-def _one_epoch_spectrum(epoch: Epoch, ra: float, dec: float, aperture_px: float) -> SpectrumPoint | None:
+def epoch_position(ra: float, dec: float, t_mjd: float,
+                   pm: tuple[float, float, float] | None) -> tuple[float, float]:
+    """Propagate (ra, dec) from its reference epoch to an observation date.
+
+    pm = (pmRA*cos(dec) mas/yr, pmDec mas/yr, reference_jyear).  Barnard's Star
+    moves 10.3 arcsec/yr, i.e. ~45 SPHEREx pixels between J2000 and 2026.
+    """
+    if not pm:
+        return ra, dec
+    pmra, pmdec, ref_year = pm
+    year = 2000.0 + (t_mjd - 51544.5) / 365.25
+    dt = year - ref_year
+    cosd = max(abs(np.cos(np.radians(dec))), 1e-3)
+    ra2 = ra + (pmra * dt / 1000.0 / 3600.0) / cosd
+    dec2 = dec + (pmdec * dt / 1000.0 / 3600.0)
+    return ra2 % 360.0, float(np.clip(dec2, -89.999, 89.999))
+
+
+def _one_epoch_spectrum(epoch: Epoch, ra: float, dec: float, aperture_factor: float,
+                        pm: tuple[float, float, float] | None = None) -> SpectrumPoint | None:
     url = epoch.aws_url or epoch.access_url
     if not url:
         return None
@@ -87,10 +115,19 @@ def _one_epoch_spectrum(epoch: Epoch, ra: float, dec: float, aperture_px: float)
         from astropy.wcs import WCS
 
         wcs = WCS(img_info.header)
-        xc, yc = wcs.all_world2pix([[ra, dec]], 0)[0]
+        era, edec = epoch_position(ra, dec, epoch.t_min, pm)
+        xc, yc = wcs.all_world2pix([[era, edec]], 0)[0]
         nx = int(img_info.header.get("NAXIS1", 2040))
         ny = int(img_info.header.get("NAXIS2", 2040))
-        half = int(max(8, aperture_px * 2.4))
+        # PSF_FWHM is in arcseconds; SPHEREx's ~6" PSF is about one 6.15" pixel.
+        # Apertures follow the PSF (with a floor of 2 px for centroiding) rather
+        # than a fixed pixel size.
+        psf = float(img_info.header.get("PSF_FWHM", 6.1) or 6.1) / config.PIXEL_SCALE_ARCSEC
+        # The PSF is ~1 pixel wide, so a pure PSF-scaled aperture would be smaller
+        # than the astrometric scatter; floor it at 3 px and use a 6 px annulus.
+        r_in = max(3.0, max(aperture_factor, 1.0) * 3.0 * psf)
+        r_out = max(r_in + 3.0, 6.0 * psf)
+        half = int(max(10, min(40, r_out * 1.25)))
         x0 = int(max(0, min(xc - half, nx - 2 * half)))
         y0 = int(max(0, min(yc - half, ny - 2 * half)))
         x1, y1 = x0 + 2 * half, y0 + 2 * half
@@ -102,11 +139,35 @@ def _one_epoch_spectrum(epoch: Epoch, ra: float, dec: float, aperture_px: float)
         wl, _bw = fitsdata.wavelength_at(structure, float(xc + 1), float(yc + 1))
         if not np.isfinite(wl):
             return None
+        # Refine the centroid on the brightest pixel within +-3 px of the
+        # predicted (proper-motion propagated) position.  Without this, a 1 px
+        # astrometric scatter plus a 3 px aperture throws away whole epochs.
+        cx, cy = float(xc - x0), float(yc - y0)
+        ix, iy = int(round(cx)), int(round(cy))
+        ys0, ys1 = max(0, iy - 3), min(image.shape[0], iy + 4)
+        xs0, xs1 = max(0, ix - 3), min(image.shape[1], ix + 4)
+        sub = image[ys0:ys1, xs0:xs1]
+        if sub.size and np.any(np.isfinite(sub)):
+            ry, rx = np.unravel_index(int(np.nanargmax(sub)), sub.shape)
+            cx, cy = float(xs0 + rx), float(ys0 + ry)
+
         flux, err, npix, _ = _aperture_flux(
             image, planes.get("VARIANCE"), planes.get("FLAGS"),
-            xc - x0, yc - y0, r_in=aperture_px, r_out=max(aperture_px * 2.2, aperture_px + 3),
+            cx, cy, r_in=r_in, r_out=r_out,
         )
         if not np.isfinite(flux):
+            return None
+        # Reject epochs where nothing is actually detected at that position: an
+        # unflagged background aperture would otherwise inject pure noise into
+        # the spectrum and look like a measurement.
+        yy, xx = np.mgrid[0:image.shape[0], 0:image.shape[1]]
+        rr = np.hypot(xx - cx, yy - cy)
+        core = image[rr <= max(1.5, aperture_factor * psf * 0.6)]
+        if core.size == 0 or not np.isfinite(np.nanmax(core)):
+            return None
+        bkg_level = float(np.nanmedian(image[rr > r_in])) if np.any(rr > r_in) else 0.0
+        peak_snr = (float(np.nanmax(core)) - bkg_level) / max(abs(float(err)) / max(npix, 1), 1e-6)
+        if peak_snr < 3.0:
             return None
         flux_mjy = flux * MJY_SR_TO_MJY_PER_PIXEL
         err_mjy = err * MJY_SR_TO_MJY_PER_PIXEL if np.isfinite(err) else float("nan")
@@ -129,8 +190,9 @@ def extract_spectrum(
     epochs: list[Epoch],
     ra: float,
     dec: float,
-    aperture_px: float = 2.5,
+    aperture_factor: float = 1.2,
     max_rows: int = 24,
+    pm: tuple[float, float, float] | None = None,
     progress=None,
 ) -> SpectrumResult:
     """Build a NIR spectrum at (ra, dec) from the epochs that cover it."""
@@ -152,7 +214,7 @@ def extract_spectrum(
 
     pts: list[SpectrumPoint] = []
     with ThreadPoolExecutor(max_workers=6) as pool:
-        futs = [pool.submit(_one_epoch_spectrum, e, ra, dec, aperture_px) for e in picked]
+        futs = [pool.submit(_one_epoch_spectrum, e, ra, dec, aperture_factor, pm) for e in picked]
         done = 0
         for fut in as_completed(futs):
             done += 1
@@ -224,7 +286,23 @@ def _col(tbl, *names) -> np.ndarray:
     raise KeyError(f"none of {names} in {tbl.colnames}")
 
 
-def detect_movers(seq, max_shift_px: float = 9.0, threshold_sigma: float = 5.0) -> list[Candidate]:
+def _upsample_for_detection(frame, factor: int):
+    """Zoom a frame so the PSF spans >= ~1.8 pixels before running DAOStarFinder.
+
+    At the native 6.15" pixel scale the SPHEREx PSF is barely one pixel wide, which
+    makes centroiding unstable; detection is therefore done on an interpolated
+    grid and the coordinates are scaled back.
+    """
+    from scipy.ndimage import zoom
+
+    data = np.asarray(frame.data, dtype=np.float32)
+    if factor <= 1:
+        return data
+    filled = np.where(np.isfinite(data), data, np.nanmedian(data[np.isfinite(data)]) if np.any(np.isfinite(data)) else 0.0)
+    return zoom(filled, factor, order=1)
+
+
+def detect_movers(seq, max_shift_px: float = 2.5, threshold_sigma: float = 5.0) -> list[Candidate]:
     """Chain detections across epochs and rank by displacement / uncertainty.
 
     This is deliberately a *difference-blind* second opinion to the differencing
@@ -232,7 +310,29 @@ def detect_movers(seq, max_shift_px: float = 9.0, threshold_sigma: float = 5.0) 
     """
     if len(seq.frames) < 2:
         return []
-    dets = [detect_sources(f, threshold_sigma=threshold_sigma) for f in seq.frames]
+
+    pix_scale_seq = seq.pixel_scale_arcsec
+    fwhm_seq = max(seq.frames[0].psf_fwhm_px * config.PIXEL_SCALE_ARCSEC / pix_scale_seq, 0.5)
+    factor = max(1, int(np.ceil(1.8 / fwhm_seq)))
+
+    class _Zoomed:
+        __slots__ = ("data", "psf_fwhm_px")
+
+        def __init__(self, data, psf):
+            self.data = data
+            self.psf_fwhm_px = psf
+
+    zoomed = [
+        _Zoomed(_upsample_for_detection(f, factor), fwhm_seq * factor) for f in seq.frames
+    ]
+    dets = [detect_sources(f, threshold_sigma=threshold_sigma) for f in zoomed]
+    if factor > 1:
+        for tbl in dets:
+            if tbl is None:
+                continue
+            for col in ("x_centroid", "y_centroid"):
+                if col in tbl.colnames:
+                    tbl[col] /= factor
     if not any(d is not None for d in dets):
         return []
 
@@ -271,7 +371,7 @@ def detect_movers(seq, max_shift_px: float = 9.0, threshold_sigma: float = 5.0) 
                 tr["n"] += 1
 
     cands: list[Candidate] = []
-    pix_scale = seq.pixel_scale_arcsec
+    pix_scale = pix_scale_seq
     for tr in tracks:
         dx = tr["xn"] - tr["x0"]
         dy = tr["yn"] - tr["y0"]

@@ -31,7 +31,7 @@ PIXEL_SCALE_ARCSEC = 6.15          # native SPHEREx pixel scale
 FOV_MIN_DEG, FOV_MAX_DEG = 0.1, 2.0
 FOV_DEFAULT_DEG = 0.5
 MAX_CUTOUT_PX = 768                # hard cap on cutout side in native pixels
-DISPLAY_PX = 384                   # blink viewer frame size
+DISPLAY_PX = 512                   # blink viewer frame size (spec: 512x512)
 
 # Nominal central wavelength (um) and bandpass edges per detector array.
 DETECTOR_INFO = {
@@ -96,11 +96,20 @@ FLAG_DESCRIPTIONS = {
     "HALO": "Scattered-light halo",
 }
 # Bits that must be treated as "do not trust this pixel" for science.
+#
+# SOURCE (bit 21) is deliberately NOT here: it only records that the pixel
+# contains a detected source.  Masking it would delete the very stars we are
+# trying to blink and photometer, punching a dark hole in every PSF core.
+# It is still counted and reported in the metadata panel.
 CONTAMINATION_BITS = (
     "TRANSIENT", "OVERFLOW", "SUR_ERROR", "PHANTOM", "NONFUNC", "DICHROIC",
     "MISSING_DATA", "HOT", "COLD", "PHANMISS", "NONLINEAR", "PERSIST",
     "OUTLIER", "BLOOM", "SNOWBALL", "GHOST", "GHOST_FPA", "GHOST_EXT",
 )
+
+# Bits that mark a pixel as useless for *photometry* of a bright source: the
+# signal is gone even though neighbours may still carry flux.
+PHOTOMETRY_HARD_BITS = ("NONFUNC", "MISSING_DATA", "SUR_ERROR", "DICHROIC", "PHANMISS")
 
 # ---------------------------------------------------------------- demo cache
 DEMO_TARGETS_PATH = ROOT / "DEMO_TARGETS.json"

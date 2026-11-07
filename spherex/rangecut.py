@@ -11,6 +11,8 @@ honour ``Range`` headers without credentials.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import threading
 import time
@@ -28,6 +30,54 @@ _SESSION = requests.Session()
 _SESSION.headers.update({"User-Agent": "spherex-time-machine/1.0 (public research tool)"})
 _STRUCT_CACHE: dict[str, "FileStructure"] = {}
 _SIZES: dict[str, int] = {}
+STRUCT_DIR = config.CACHE_DIR / "structures"
+STRUCT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _struct_path(url: str):
+    return STRUCT_DIR / (hashlib.sha1(url.encode()).hexdigest() + ".json")
+
+
+def _save_structure(fs: "FileStructure") -> None:
+    try:
+        payload = {
+            "url": fs.url,
+            "saved": time.time(),
+            "hdus": [
+                {"index": h.index, "name": h.name, "raw_header": h.raw_header,
+                 "data_offset": h.data_offset, "data_size": h.data_size,
+                 "ndim": h.ndim, "shape": list(h.shape)}
+                for h in fs.hdus
+            ],
+        }
+        path = _struct_path(fs.url)
+        tmp = path.with_suffix(".tmp")
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh)
+        tmp.replace(path)
+    except Exception:
+        pass
+
+
+def _load_structure(url: str) -> "FileStructure | None":
+    try:
+        path = _struct_path(url)
+        if not path.exists():
+            return None
+        with open(path, encoding="utf-8") as fh:
+            payload = json.load(fh)
+        hdus = []
+        for h in payload["hdus"]:
+            hdus.append(HDUInfo(
+                index=h["index"], name=h["name"],
+                header=fits.Header.fromstring(h["raw_header"]),
+                raw_header=h["raw_header"], data_offset=h["data_offset"],
+                data_size=h["data_size"], ndim=h["ndim"],
+                shape=tuple(h["shape"]),
+            ))
+        return FileStructure(url=url, hdus=hdus)
+    except Exception:
+        return None
 _LOCK = threading.Lock()
 
 
@@ -158,6 +208,12 @@ def parse_structure(url: str, use_cache: bool = True) -> FileStructure:
     with _LOCK:
         if use_cache and url in _STRUCT_CACHE:
             return _STRUCT_CACHE[url]
+    if use_cache:
+        cached = _load_structure(url)
+        if cached is not None:
+            with _LOCK:
+                _STRUCT_CACHE[url] = cached
+            return cached
 
     offset = 0
     hdus: list[HDUInfo] = []
@@ -179,6 +235,8 @@ def parse_structure(url: str, use_cache: bool = True) -> FileStructure:
     struct = FileStructure(url=url, hdus=hdus, parsed_at=time.time())
     with _LOCK:
         _STRUCT_CACHE[url] = struct
+    if use_cache:
+        _save_structure(struct)
     return struct
 
 

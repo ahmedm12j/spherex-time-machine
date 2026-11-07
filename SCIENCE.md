@@ -85,9 +85,31 @@ convolved with a Gaussian of FWHM √(FWHM_A² − FWHM_B²) before subtraction,
 PSF difference is not mistaken for a brightness change.
 
 **Aperture photometry.** Spectra use a circular aperture with a local annulus
-background. Flux conversion: one 6.15″ pixel subtends 8.89×10⁻¹⁰ sr, so
-1 MJy/sr integrated over one pixel equals 0.889 mJy. Errors come from the
-`VARIANCE` plane summed over the aperture.
+background. The radius is **not** a fixed pixel count: the SPHEREx PSF is ~6″
+FWHM, comparable to one 6.15″ pixel, so the default aperture is 1.2 × FWHM with
+a 2.4 × FWHM background annulus. A fixed 2.5-pixel aperture misses most of the
+light and produced spectra consistent with noise before this was fixed.
+Flux conversion: one 6.15″ pixel subtends 8.89×10⁻¹⁰ sr, so 1 MJy/sr integrated
+over one pixel equals 0.889 mJy. Errors come from the `VARIANCE` plane summed
+over the aperture.
+
+**Proper motion must be applied per epoch.** This is the decision that matters
+most for this particular tool. Barnard's Star moves 10.3″/yr, so in 2026 data it
+sits ~270″ — about 45 SPHEREx pixels — away from its J2000 coordinates. A fixed
+aperture on the catalogue position therefore measures empty sky and returns a
+noise spectrum. Before extraction, each target's position is propagated to the
+observation date using its proper motion (bundled catalogue values for the five
+demo targets, Gaia DR3 for arbitrary coordinates). With the correction applied,
+Barnard's Star yields 182 → 579 mJy from 0.75 to 3.8 µm, an ordinary M-dwarf SED,
+instead of noise.
+
+**`SOURCE` is not contamination.** The `FLAGS` bit `SOURCE` (21) records that a
+pixel contains a detected source. Treating it as contamination — as a naive
+"mask every flag" rule does — punches a dark hole through the centre of every
+star, corrupting both the blink images and the photometry. It is excluded from
+the mask and reported as information instead. Saturated cores (`OVERFLOW`) *are*
+masked, and the aperture sum is corrected for the surviving area fraction so a
+bright star still yields a flux estimate.
 
 **Mover ranking.** Detections are chained across epochs by nearest neighbour
 within a configurable shift. Score = total displacement / 0.25 px centroid

@@ -69,10 +69,21 @@ WAVE_CACHE: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
 
 
 def _wave_table(structure: rangecut.FileStructure) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Read the WCS-WAVE extension (tiny bin table, ~20 KB)."""
+    """Read the WCS-WAVE extension (tiny bin table, ~20 KB), cached on disk."""
     url = structure.url
     if url in WAVE_CACHE:
         return WAVE_CACHE[url]
+    import hashlib
+
+    disk = CUTOUT_DIR / ("wave_" + hashlib.sha1(url.encode()).hexdigest()[:16] + ".npz")
+    if disk.exists():
+        try:
+            blob = np.load(disk, allow_pickle=False)
+            table = (blob["x"], blob["y"], blob["v"])
+            WAVE_CACHE[url] = table
+            return table
+        except Exception:
+            pass
     info = structure.get("WCS-WAVE")
     raw = rangecut._get_range(url, info.data_offset, info.data_offset + info.data_size - 1)
     # Rebuild a one-row FITS table in memory: header + data.
@@ -85,6 +96,10 @@ def _wave_table(structure: rangecut.FileStructure) -> tuple[np.ndarray, np.ndarr
     y = np.asarray(row["Y"], dtype=float)
     vals = np.asarray(row["VALUES"], dtype=float)  # shape (ny, nx, 2)
     WAVE_CACHE[url] = (x, y, vals)
+    try:
+        np.savez(disk, x=x, y=y, v=vals)
+    except Exception:
+        pass
     return x, y, vals
 
 
@@ -182,7 +197,9 @@ def _read_cached(path: Path, epoch: Epoch) -> Cutout | None:
             mask=blob["mask"].astype(bool),
             wavelength=blob["wavelength"].astype(np.float32),
             wl_center=float(blob["wl_center"]),
-            psf_fwhm_px=float(blob["psf_fwhm_px"]),
+            # Always re-derive from the header so stale caches written before the
+            # arcsec->pixel fix cannot poison apertures or centroiding.
+            psf_fwhm_px=float(header.get("PSF_FWHM", 6.1) or 6.1) / config.PIXEL_SCALE_ARCSEC,
             bounds=tuple(int(v) for v in blob["bounds"]),
             flag_counts=flag_summary(blob["flags"]),
         )
@@ -285,7 +302,9 @@ def load_cutout(
         wl_center = float(info.get("wl_center", float("nan")))
         wl_map = np.full(data["IMAGE"].shape, wl_center, dtype=np.float32)
 
-    psf_fwhm = float(img_info.header.get("PSF_FWHM", 6.1) or 6.1)
+    # PSF_FWHM is in ARCSECONDS (SPHEREx's PSF is ~6" ~= 1 native pixel); convert
+    # to pixels, otherwise apertures and centroiding are ~6x too large.
+    psf_fwhm = float(img_info.header.get("PSF_FWHM", 6.1) or 6.1) / config.PIXEL_SCALE_ARCSEC
 
     cut = Cutout(
         epoch=epoch,

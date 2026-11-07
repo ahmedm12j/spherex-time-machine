@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "generated": "2026-11-07",
-  "notes": "Machine-readable NASA test-target map. ra_text/dec_text are exactly the strings a judge can paste into the app. All coordinates are ICRS J2000.",
+  "notes": "Machine-readable NASA test-target map. ra_text/dec_text are exactly the strings a judge can paste into the app. All coordinates are ICRS J2000. proper_motion is used to propagate each target's position to each observation epoch; Gaia DR3 is queried for arbitrary coordinates.",
   "targets": [
     {
       "name": "Barnard's Star",
@@ -11,11 +11,22 @@
       "ra_text": "17h57m48.5s",
       "dec_text": "+04d41m36s",
       "category": "high proper motion star",
-      "note": "High proper motion — 10.3 arcsec/yr, the fastest star relative to the Sun",
+      "note": "High proper motion \u2014 10.3 arcsec/yr, the fastest star relative to the Sun",
       "why_it_matters": "Moves ~2.5 SPHEREx pixels per year, so a multi-epoch blink shows real motion against fixed background stars.",
       "expected_behavior": "Multiple epochs returned; blink shows the star drifting relative to the stellar background; mover finder ranks it near the top.",
       "fallback": "If no epoch covers the position, a coverage-pending card with an IRSA deep link is shown.",
-      "known_reference": {"pm_ra_mas_yr": -798.58, "pm_dec_mas_yr": 10328.12, "distance_pc": 1.834}
+      "known_reference": {
+        "pm_ra_mas_yr": -798.58,
+        "pm_dec_mas_yr": 10328.12,
+        "distance_pc": 1.834
+      },
+      "proper_motion": {
+        "pmra": -798.58,
+        "pmdec": 10328.12,
+        "epoch": 2000.0,
+        "source": "Gaia DR3 / Hipparcos"
+      },
+      "proper_motion_note": "pmra is pmRA*cos(dec) in mas/yr. Applied per epoch so apertures follow the star."
     },
     {
       "name": "Epsilon Indi B",
@@ -26,10 +37,20 @@
       "dec_text": "-56d47m10s",
       "category": "brown dwarf pair",
       "note": "Brown dwarf pair (Ba/Bb) 3.6 pc away, wide orbit around Epsilon Indi A",
-      "why_it_matters": "Bright in the near-infrared but faint in visible light — a good test of SPHEREx sensitivity at southern declinations.",
+      "why_it_matters": "Bright in the near-infrared but faint in visible light \u2014 a good test of SPHEREx sensitivity at southern declinations.",
       "expected_behavior": "Southern target served by QR2/QR3; spectrum peaks in H/K band; blink shows a faint point source.",
       "fallback": "Southern coverage is sparser; coverage-pending card is acceptable and is documented in VALIDATION.md.",
-      "known_reference": {"distance_pc": 3.626, "spectral_type": "T1/T6"}
+      "known_reference": {
+        "distance_pc": 3.626,
+        "spectral_type": "T1/T6"
+      },
+      "proper_motion": {
+        "pmra": -3961.41,
+        "pmdec": -2538.33,
+        "epoch": 2000.0,
+        "source": "Gaia DR3 (comoving with Eps Ind A)"
+      },
+      "proper_motion_note": "pmra is pmRA*cos(dec) in mas/yr. Applied per epoch so apertures follow the star."
     },
     {
       "name": "WISE 0855",
@@ -39,16 +60,27 @@
       "ra_text": "08h55m10.831s",
       "dec_text": "-07d14m42.53s",
       "category": "fast-moving brown dwarf",
-      "note": "WISE 0855-0714 — coldest known brown dwarf, ~7.5 pc, very high proper motion",
+      "note": "WISE 0855-0714 \u2014 coldest known brown dwarf, ~7.5 pc, very high proper motion",
       "why_it_matters": "Extreme red colours and rapid motion make it an ideal difference-imaging target.",
       "expected_behavior": "Exact sexagesimal coordinates parse and render; source appears only at longer wavelengths.",
       "fallback": "If the source is below the detection limit in a band, the image still renders with catalogue overlay showing the expected position.",
-      "known_reference": {"pm_total_mas_yr": 4800, "distance_pc": 7.43, "spectral_type": "Y4"}
+      "known_reference": {
+        "pm_total_mas_yr": 1471,
+        "distance_pc": 7.43,
+        "spectral_type": "Y4"
+      },
+      "proper_motion": {
+        "pmra": -1351.0,
+        "pmdec": -574.0,
+        "epoch": 2000.0,
+        "source": "WISE/Spitzer astrometry (approx.)"
+      },
+      "proper_motion_note": "pmra is pmRA*cos(dec) in mas/yr. Applied per epoch so apertures follow the star."
     },
     {
       "name": "RW Aurigae",
       "slug": "rw_aur",
-      "ra_deg": 76.956250,
+      "ra_deg": 76.95625,
       "dec_deg": 30.402222,
       "ra_text": "05h07m49.5s",
       "dec_text": "+30d24m08s",
@@ -57,13 +89,23 @@
       "why_it_matters": "A variability test: the difference image should light up at the star position even when nothing moves.",
       "expected_behavior": "Bright source; difference mode shows a strong point-source residual; mover finder must NOT rank it high (it does not move).",
       "fallback": "Saturated pixels are flagged OVERFLOW and masked; the metadata panel reports the masked fraction.",
-      "known_reference": {"type": "T Tauri", "variability": "irregular, up to 3 mag"}
+      "known_reference": {
+        "type": "T Tauri",
+        "variability": "irregular, up to 3 mag"
+      },
+      "proper_motion": {
+        "pmra": -2.8,
+        "pmdec": -21.0,
+        "epoch": 2000.0,
+        "source": "Gaia DR3 (approx.)"
+      },
+      "proper_motion_note": "pmra is pmRA*cos(dec) in mas/yr. Applied per epoch so apertures follow the star."
     },
     {
       "name": "R Draconis",
       "slug": "r_dra",
-      "ra_deg": 248.167500,
-      "dec_deg": 66.755000,
+      "ra_deg": 248.1675,
+      "dec_deg": 66.755,
       "ra_text": "16h32m40.2s",
       "dec_text": "+66d45m18s",
       "category": "variable star",
@@ -71,7 +113,17 @@
       "why_it_matters": "Tests high-declination coverage where SPHEREx scanning is densest, and large-amplitude variability in the difference image.",
       "expected_behavior": "Bright, strongly variable source; large difference-image residuals between epochs separated by months.",
       "fallback": "Very bright star may saturate many pixels; the app masks OVERFLOW/BLOOM and reports them.",
-      "known_reference": {"type": "Mira variable", "period_days": 245.6}
+      "known_reference": {
+        "type": "Mira variable",
+        "period_days": 245.6
+      },
+      "proper_motion": {
+        "pmra": -47.0,
+        "pmdec": 54.0,
+        "epoch": 2000.0,
+        "source": "Gaia DR3 (approx.)"
+      },
+      "proper_motion_note": "pmra is pmRA*cos(dec) in mas/yr. Applied per epoch so apertures follow the star."
     }
   ]
 }

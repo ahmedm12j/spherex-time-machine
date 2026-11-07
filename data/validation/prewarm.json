@@ -1,0 +1,62 @@
+{
+  "barnards_star": {
+    "name": "Barnard's Star",
+    "n_rows": 479,
+    "n_epochs": 235,
+    "n_frames": 8,
+    "n_spectrum_points": 4,
+    "query_seconds": 0.04,
+    "sequence_seconds": 17.46,
+    "spectrum_seconds": 8.14,
+    "notes": [],
+    "message": ""
+  },
+  "epsilon_indi_b": {
+    "name": "Epsilon Indi B",
+    "n_rows": 650,
+    "n_epochs": 338,
+    "n_frames": 8,
+    "n_spectrum_points": 6,
+    "query_seconds": 0.03,
+    "sequence_seconds": 16.93,
+    "spectrum_seconds": 13.93,
+    "notes": [],
+    "message": ""
+  },
+  "wise_0855": {
+    "name": "WISE 0855",
+    "n_rows": 423,
+    "n_epochs": 186,
+    "n_frames": 8,
+    "n_spectrum_points": 6,
+    "query_seconds": 0.61,
+    "sequence_seconds": 21.28,
+    "spectrum_seconds": 15.01,
+    "notes": [],
+    "message": ""
+  },
+  "rw_aur": {
+    "name": "RW Aurigae",
+    "n_rows": 653,
+    "n_epochs": 266,
+    "n_frames": 8,
+    "n_spectrum_points": 6,
+    "query_seconds": 1.28,
+    "sequence_seconds": 25.41,
+    "spectrum_seconds": 12.76,
+    "notes": [],
+    "message": ""
+  },
+  "r_dra": {
+    "name": "R Draconis",
+    "n_rows": 842,
+    "n_epochs": 391,
+    "n_frames": 8,
+    "n_spectrum_points": 1,
+    "query_seconds": 0.08,
+    "sequence_seconds": 16.9,
+    "spectrum_seconds": 10.13,
+    "notes": [],
+    "message": ""
+  }
+}

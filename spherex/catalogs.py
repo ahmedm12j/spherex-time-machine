@@ -130,6 +130,61 @@ def allwise(ra: float, dec: float, radius_deg: float, use_cache: bool = True) ->
     return overlay
 
 
+def _bundled_pm(ra: float, dec: float, max_sep_arcsec: float = 90.0):
+    """Proper motion from DEMO_TARGETS.json for the five named targets.
+
+    Used first for the demo targets so the app never blocks on Vizier, and as a
+    fallback whenever the Gaia query is unavailable.
+    """
+    from . import config
+
+    best = None
+    for t in config.load_targets():
+        pm = t.get("proper_motion")
+        if not pm:
+            continue
+        d_ra = (ra - t["ra_deg"]) * np.cos(np.radians(dec))
+        d_dec = dec - t["dec_deg"]
+        sep = float(np.hypot(d_ra, d_dec) * 3600.0)
+        if sep <= max_sep_arcsec and (best is None or sep < best[0]):
+            best = (sep, pm)
+    if best is None:
+        return None
+    pm = best[1]
+    return float(pm["pmra"]), float(pm["pmdec"]), float(pm.get("epoch", 2000.0))
+
+
+def nearest_proper_motion(ra: float, dec: float, radius_deg: float = 0.02) -> tuple[float, float, float] | None:
+    """Proper motion of the closest source, as (pmra*cos(dec), pmdec, epoch_year).
+
+    High-proper-motion stars are tens of pixels away from their J2000 position in
+    2026 data.  Without this correction a fixed aperture measures empty sky -- and
+    the whole point of this tool is stars that move.
+
+    Order: bundled catalogue values for the five NASA demo targets (instant,
+    offline-safe), then Gaia DR3 via Vizier for everything else.
+    """
+    bundled = _bundled_pm(ra, dec)
+    if bundled is not None:
+        return bundled
+    ov = gaia_dr3(ra, dec, radius_deg)
+    if ov.empty:
+        return None
+    df = ov.table
+    if "pmra" not in df.columns or "pmdec" not in df.columns:
+        return None
+    try:
+        sep = ((df["ra"] - ra) * np.cos(np.radians(dec)))**2 + (df["dec"] - dec)**2
+        row = df.loc[sep.idxmin()]
+        pmra = float(row["pmra"])
+        pmdec = float(row["pmdec"])
+        if not (np.isfinite(pmra) and np.isfinite(pmdec)):
+            return None
+        return pmra, pmdec, 2016.0
+    except Exception:
+        return None
+
+
 def to_pixels(overlay: Overlay, wcs, shape: tuple[int, int]) -> pd.DataFrame:
     """Project catalogue RA/Dec onto the sequence reference pixel grid."""
     if overlay.empty:

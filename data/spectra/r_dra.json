@@ -1,0 +1,19 @@
+{
+  "target": "R Draconis",
+  "slug": "r_dra",
+  "ra_deg": 248.1675,
+  "dec_deg": 66.755,
+  "generated": "2026-11-07T07:02:43Z",
+  "n_points": 1,
+  "points": [
+    {
+      "wavelength_um": 1.40466,
+      "flux_mjy": 54.420195,
+      "err_mjy": 0.67819,
+      "snr": 80.24,
+      "detector": 2,
+      "obs_id": "2025W23_2B_0696_1",
+      "mjd": 60834.7878
+    }
+  ]
+}

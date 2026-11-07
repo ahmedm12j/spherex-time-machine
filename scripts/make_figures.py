@@ -82,8 +82,8 @@ def fig_spectrum() -> None:
     er = [(p["err_mjy"] or 0.0) for p in pts]
     fig, ax = plt.subplots(figsize=(7.4, 4.4), facecolor="#0b0e14")
     ax.set_facecolor("#0b0e14")
-    ax.errorbar(wl, fl, yerr=er, fmt="o-", color="#7ee0ff", ecolor="#3a6a8a",
-                ms=6, lw=1.4, capsize=3)
+    ax.errorbar(wl, fl, yerr=er, fmt="o", color="#7ee0ff", ecolor="#3a6a8a",
+                ms=7, capsize=3)
     ax.set_xlabel("Wavelength (µm)", color="#dfe7f5")
     ax.set_ylabel("Flux density (mJy)", color="#dfe7f5")
     ax.set_title(f"Barnard's Star — {blob['n_points']} SPHEREx revisit samples",

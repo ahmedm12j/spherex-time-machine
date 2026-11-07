@@ -96,8 +96,9 @@ def cached_pngs(ra: float, dec: float, fov: float, mode: str, detector: int,
 def cached_spectrum(ra: float, dec: float, fov: float, aperture: float,
                     max_rows: int) -> photometry.SpectrumResult:
     res = archive.get_epochs(ra, dec, fov)
-    return photometry.extract_spectrum(res.epochs, ra, dec,
-                                       aperture_px=aperture, max_rows=max_rows)
+    pm = catalogs.nearest_proper_motion(ra, dec)
+    return photometry.extract_spectrum(res.epochs, ra, dec, aperture_factor=aperture,
+                                       max_rows=max_rows, pm=pm)
 
 
 @st.cache_data(ttl=86400, show_spinner=False, max_entries=16)
@@ -345,9 +346,19 @@ def render() -> None:
         result = cached_epochs(ra, dec, fov)
 
     if result.empty:
-        _coverage_card(ra, dec)
-        if result.message:
-            st.caption(f"Diagnostics: {result.message}")
+        if not result.ok:
+            st.markdown(_card(
+                "err", "Archive busy",
+                "IRSA did not answer after two retries with exponential backoff. This is usually "
+                "temporary load on the archive, not a problem with your query."),
+                unsafe_allow_html=True)
+            if result.message:
+                st.caption(f"Diagnostics: {result.message}")
+            if st.button("Retry the archive query", key="retry_archive"):
+                st.cache_data.clear()
+                st.rerun()
+        else:
+            _coverage_card(ra, dec)
         _demo_frame(ra, dec)
         _render_science_notes()
         return
@@ -519,12 +530,17 @@ def _render_difference(seq: pipeline.Sequence) -> None:
                           title=dict(text=res["stats"]["label"], font=dict(size=12, color="#a9b8d0")),
                           xaxis=dict(visible=False), yaxis=dict(visible=False, autorange="reversed"))
         st.plotly_chart(fig, use_container_width=True)
-        noise = res["stats"].get("sigma_emp", res["stats"]["std"])
-        verdict = "interpretable" if 0.4 < noise < 3.0 else "check normalisation"
+        if set(seq.frames[i_a].detectors) != set(seq.frames[i_b].detectors):
+            st.caption(
+                "These two epochs combine different detector arrays, i.e. different wavelengths. "
+                "That colour difference is real but shows up as structure; switch to "
+                "**Single detector** and pick one array for a cleaner difference.")
+        sigma_cal = res["stats"].get("sigma_cal", 1.0)
+        verdict = "interpretable" if abs(sigma_cal - 1.0) < 0.15 else "check normalisation"
         st.markdown(
             _card("ok" if verdict == "interpretable" else "warn",
                   f"Difference statistics — {verdict}",
-                  f"Median S/N {res['stats']['median']:.2f} · noise σ {noise:.2f} · "
+                  f"Median S/N {res['stats']['median']:.2f} · calibrated σ {sigma_cal:.2f} · "
                   f"|S/N|₉₉ {res['stats']['p99']:.1f} · Δt {res['stats']['dt_days']:.1f} d. "
                   "A well-behaved variance-weighted difference has σ ≈ 1."),
             unsafe_allow_html=True)
@@ -590,7 +606,9 @@ def _render_spectrum(seq: pipeline.Sequence, ra: float, dec: float, fov: float,
                 pass
 
     c1, c2, c3 = st.columns([1, 1, 1])
-    aperture = c1.slider("Aperture (pixels)", 1.5, 6.0, 2.5, 0.5, key="ap_sl")
+    aperture = c1.slider("Aperture (x PSF FWHM)", 0.6, 2.5, 1.2, 0.1, key="ap_sl",
+                         help="SPHEREx's PSF is ~6 arcsec FWHM, so the default aperture is "
+                              "1.2 x FWHM. Smaller apertures miss most of the light.")
     max_rows = c2.slider("Epochs sampled", 6, 40, 18, 2, key="spec_rows",
                          help="Each sample is one archive read; higher = fuller spectrum, slower.")
     if c3.button("Extract spectrum at centre", use_container_width=True):
@@ -611,12 +629,12 @@ def _render_spectrum(seq: pipeline.Sequence, ra: float, dec: float, fov: float,
         er = [p.err_mjy if np.isfinite(p.err_mjy) else 0.0 for p in pts]
         sfig = go.Figure()
         sfig.add_trace(go.Scatter(
-            x=wl, y=fl, mode="markers+lines",
+            x=wl, y=fl, mode="markers",
             error_y=dict(type="data", array=er, visible=True, thickness=1, width=2,
                          color="rgba(126,224,255,.55)"),
             marker=dict(size=8, color=[f"{WAVELENGTH_COLORS.get(p.detector, '#7ee0ff')}" for p in pts],
                         line=dict(width=1, color="#0b0e14")),
-            line=dict(color="rgba(126,224,255,.45)", width=1.5),
+
             text=[f"{p.obs_id} D{p.detector}" for p in pts],
             hovertemplate="λ %{x:.3f} µm<br>%{y:.3f} mJy<br>%{text}<extra></extra>",
             name="SPHEREx",
@@ -633,7 +651,8 @@ def _render_spectrum(seq: pipeline.Sequence, ra: float, dec: float, fov: float,
         )
         st.plotly_chart(sfig, use_container_width=True)
         st.caption(f"{len(pts)} wavelength samples from {spec.n_attempted} archive reads · "
-                   f"aperture {aperture:.1f} px · background from a local annulus")
+                   f"aperture {aperture:.1f}× FWHM · background from a local annulus. "
+                   f"Samples are unevenly spaced, so points are not joined by a line.")
         with st.expander("Spectrum data table"):
             st.dataframe(pd.DataFrame([{
                 "λ (µm)": f"{p.wavelength_um:.3f}", "Flux (mJy)": f"{p.flux_mjy:.4f}",
@@ -681,7 +700,8 @@ def _render_discovery(seq: pipeline.Sequence, ra: float, dec: float, fov: float)
         return
     c1, c2 = st.columns([1, 1])
     threshold = c1.slider("Detection threshold (σ)", 3.0, 10.0, 5.0, 0.5, key="disc_thr")
-    max_shift = c2.slider("Max frame-to-frame shift (px)", 2.0, 20.0, 9.0, 1.0, key="disc_shift")
+    max_shift = c2.slider("Max frame-to-frame shift (px)", 1.0, 8.0, 2.5, 0.5, key="disc_shift",
+                          help="Tighter values stop the tracker hopping between unrelated stars.")
 
     if st.button("Run discovery scan", type="primary", key="disc_run"):
         with st.spinner("Detecting and chaining sources across epochs…"):
