@@ -1,0 +1,163 @@
+{
+  "target": "Barnard's Star",
+  "slug": "barnards_star",
+  "ra_deg": 269.452083,
+  "dec_deg": 4.693333,
+  "generated": "2026-11-07T06:05:57Z",
+  "n_points": 17,
+  "points": [
+    {
+      "wavelength_um": 0.74366,
+      "flux_mjy": -0.164728,
+      "err_mjy": 0.082791,
+      "snr": -1.99,
+      "detector": 1,
+      "obs_id": "2025W35_1A_0432_4",
+      "mjd": 60914.2125
+    },
+    {
+      "wavelength_um": 0.75189,
+      "flux_mjy": -0.315832,
+      "err_mjy": 0.075885,
+      "snr": -4.16,
+      "detector": 1,
+      "obs_id": "2026W36_1A_0510_1",
+      "mjd": 61285.257
+    },
+    {
+      "wavelength_um": 0.83072,
+      "flux_mjy": -0.109489,
+      "err_mjy": 0.088516,
+      "snr": -1.24,
+      "detector": 1,
+      "obs_id": "2026W11_1A_0511_2",
+      "mjd": 61110.4345
+    },
+    {
+      "wavelength_um": 1.09144,
+      "flux_mjy": -0.438494,
+      "err_mjy": 0.122688,
+      "snr": -3.57,
+      "detector": 2,
+      "obs_id": "2025W34_2B_0090_4",
+      "mjd": 60908.9819
+    },
+    {
+      "wavelength_um": 1.35889,
+      "flux_mjy": -0.080994,
+      "err_mjy": 0.081174,
+      "snr": -1.0,
+      "detector": 2,
+      "obs_id": "2026W12_1A_0311_2",
+      "mjd": 61116.6816
+    },
+    {
+      "wavelength_um": 1.49773,
+      "flux_mjy": -0.36847,
+      "err_mjy": 0.078133,
+      "snr": -4.72,
+      "detector": 2,
+      "obs_id": "2026W39_1A_0371_1",
+      "mjd": 61305.628
+    },
+    {
+      "wavelength_um": 2.2767,
+      "flux_mjy": 0.108055,
+      "err_mjy": 0.058781,
+      "snr": 1.84,
+      "detector": 3,
+      "obs_id": "2026W12_2A_0520_3",
+      "mjd": 61121.3671
+    },
+    {
+      "wavelength_um": 2.28808,
+      "flux_mjy": -0.099265,
+      "err_mjy": 0.055387,
+      "snr": -1.79,
+      "detector": 3,
+      "obs_id": "2025W33_2C_0321_1",
+      "mjd": 60902.8647
+    },
+    {
+      "wavelength_um": 2.40991,
+      "flux_mjy": -0.141932,
+      "err_mjy": 0.090705,
+      "snr": -1.56,
+      "detector": 3,
+      "obs_id": "2026W38_2A_0562_1",
+      "mjd": 61303.1855
+    },
+    {
+      "wavelength_um": 2.44501,
+      "flux_mjy": -0.170437,
+      "err_mjy": 0.060218,
+      "snr": -2.83,
+      "detector": 4,
+      "obs_id": "2026W36_1A_0510_1",
+      "mjd": 61285.257
+    },
+    {
+      "wavelength_um": 2.81039,
+      "flux_mjy": -0.109259,
+      "err_mjy": 0.055167,
+      "snr": -1.98,
+      "detector": 4,
+      "obs_id": "2026W11_1A_0511_3",
+      "mjd": 61110.436
+    },
+    {
+      "wavelength_um": 3.80259,
+      "flux_mjy": -0.048765,
+      "err_mjy": 0.114819,
+      "snr": -0.42,
+      "detector": 5,
+      "obs_id": "2025W34_2B_0090_4",
+      "mjd": 60908.9819
+    },
+    {
+      "wavelength_um": 4.12285,
+      "flux_mjy": -0.317625,
+      "err_mjy": 0.139229,
+      "snr": -2.28,
+      "detector": 5,
+      "obs_id": "2026W12_1A_0311_2",
+      "mjd": 61116.6816
+    },
+    {
+      "wavelength_um": 4.27685,
+      "flux_mjy": 0.096813,
+      "err_mjy": 0.14407,
+      "snr": 0.67,
+      "detector": 5,
+      "obs_id": "2026W39_1A_0371_1",
+      "mjd": 61305.628
+    },
+    {
+      "wavelength_um": 4.90159,
+      "flux_mjy": -0.190052,
+      "err_mjy": 0.256157,
+      "snr": -0.74,
+      "detector": 6,
+      "obs_id": "2026W12_2A_0520_3",
+      "mjd": 61121.3671
+    },
+    {
+      "wavelength_um": 4.90913,
+      "flux_mjy": -0.025633,
+      "err_mjy": 0.206688,
+      "snr": -0.12,
+      "detector": 6,
+      "obs_id": "2025W33_2C_0321_1",
+      "mjd": 60902.8647
+    },
+    {
+      "wavelength_um": 4.99972,
+      "flux_mjy": 0.395657,
+      "err_mjy": 0.28226,
+      "snr": 1.4,
+      "detector": 6,
+      "obs_id": "2026W38_2A_0562_1",
+      "mjd": 61303.1855
+    }
+  ]
+}

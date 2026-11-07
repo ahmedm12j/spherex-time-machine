@@ -1,0 +1,18 @@
+# SPHEREx Time Machine — pinned for Streamlit Community Cloud and Docker.
+# Python 3.11
+streamlit==1.39.0
+astropy==7.2.3
+astroquery==0.4.11
+pyvo==1.10.0
+photutils==3.0.0
+reproject==0.21.0
+astroalign==2.6.2
+numpy==2.4.6
+scipy==1.17.1
+pandas==2.3.3
+plotly==5.24.1
+matplotlib==3.11.2
+requests==2.34.2
+pillow==10.4.0
+fsspec==2026.9.0
+aiohttp==3.14.5
