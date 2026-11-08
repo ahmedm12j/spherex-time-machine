@@ -290,7 +290,7 @@ def render() -> None:
             cmap = st.selectbox("Colormap", ["viridis", "magma", "inferno", "gray"],
                                 key="cmap_in")
             fps = st.slider("Blink rate (fps)", 4, 20, 12)
-            max_frames = st.slider("Epochs to load", 4, 16, 10,
+            max_frames = st.slider("Epochs to load", 4, 16, 6,
                                    help="More epochs = better movie, more archive reads.")
 
         overlays = st.multiselect("Catalogue overlays", ["Gaia DR3", "AllWISE"],

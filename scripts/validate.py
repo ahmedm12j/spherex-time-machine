@@ -77,7 +77,7 @@ def check_wise0855() -> None:
         record("WISE 0855 exact coords resolve and render", False, str(exc))
         return
     res = archive.get_epochs(parsed.ra_deg, parsed.dec_deg, 0.5)
-    seq = pipeline.build_sequence(res.epochs, parsed.ra_deg, parsed.dec_deg, 0.5, max_frames=5)
+    seq = pipeline.build_sequence(res.epochs, parsed.ra_deg, parsed.dec_deg, 0.5, max_frames=6)
     frames_ok = len(seq) >= 2
     record(
         "WISE 0855 exact coords resolve and render",

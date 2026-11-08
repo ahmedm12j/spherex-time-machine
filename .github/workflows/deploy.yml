@@ -1,10 +1,9 @@
-# Deploy the Streamlit app to Streamlit Community Cloud on every push to `main`.
-# This is a convenience workflow: the URL is already live at
-# https://spherex-time-machine.streamlit.app — this just keeps it in sync with `main`.
+# Optional mirror: push the head commit to the Streamlit Cloud deploy branch.
+# The live app is already deployed at https://spherex-time-machine.streamlit.app and is
+# connected to `main` in Streamlit Cloud. This workflow is not required for a normal deploy.
 #
-# Required secret: STREAMLIT_CLOUD_PAT (a GitHub PAT with repo scope, owned by the
-# repo owner). The workflow does NOT store or log it. If the secret is absent, the
-# workflow is a no-op (the live URL keeps running the last successful deploy).
+# Required secret: STREAMLIT_CLOUD_PAT (a GitHub PAT with repo scope, owned by the repo
+# owner). If the secret is absent the job is skipped. The workflow does not store or log it.
 
 name: Deploy to Streamlit Cloud
 
@@ -31,10 +30,9 @@ jobs:
         run: |
           set -euo pipefail
           if ! gh api "repos/$GH_REPO" >/dev/null 2>&1; then
-            echo "gh token cannot read the repo — skipping deploy (URL keeps old code)"
+            echo "gh token cannot read the repo — skipping deploy (the live app keeps its current build)"
             exit 0
           fi
-          # Streamlit Cloud watches this branch for the app root.
           git clone --depth 1 --branch "$GH_BRANCH" "https://x-access-token:$GH_TOKEN@github.com/$GH_REPO.git" deploy 2>/dev/null || {
             gh api "repos/$GH_REPO/git/refs" -X POST -f "ref=refs/heads/$GH_BRANCH" \
               -f "sha=$(git rev-parse HEAD)" >/dev/null
@@ -44,4 +42,4 @@ jobs:
           git reset --hard "origin/main" || git reset --hard HEAD
           git clean -fd
           git push -q "https://x-access-token:$GH_TOKEN@github.com/$GH_REPO.git" HEAD:"$GH_BRANCH"
-          echo "pushed to $GH_BRANCH — Streamlit Cloud will rebuild on the next commit"
+          echo "pushed to $GH_BRANCH — Streamlit Cloud will rebuild from that branch"

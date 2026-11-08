@@ -3,9 +3,18 @@
   "slug": "r_dra",
   "ra_deg": 248.1675,
   "dec_deg": 66.755,
-  "generated": "2026-11-07T07:02:43Z",
-  "n_points": 1,
+  "generated": "2026-11-08T06:51:51Z",
+  "n_points": 2,
   "points": [
+    {
+      "wavelength_um": 0.847,
+      "flux_mjy": 11.042298,
+      "err_mjy": 0.32241,
+      "snr": 34.25,
+      "detector": 1,
+      "obs_id": "2025W43_2A_0464_2",
+      "mjd": 60973.5593
+    },
     {
       "wavelength_um": 1.40466,
       "flux_mjy": 54.420195,
