@@ -7,11 +7,11 @@ An external render from a different network loads the app shell, the LIVE IRSA b
 
 ## What is deployed
 
-The live app is built from `main`. The last code commit before this documentation cleanup is
-`c4ece06` ("Fix test_pipeline.py UnicodeEncodeError in the spectrum printout"); the live page
-rendered its default of 10 epochs, matching that code. This cleanup changes one UI default
-(10 → 6 epochs) and the docs only. After this commit is pushed, Streamlit Cloud rebuilds from
-`main`; application code is otherwise unchanged.
+The live app is built from `main`. The application-code commit is `6bb8a67` ("Align docs with
+the live app; regenerate r_dra; fix validation drift"). It changes one UI default (10 → 6
+epochs) and the docs; the science code is otherwise unchanged from `c4ece06`. Streamlit Cloud
+rebuilds from `main` on push. Any later documentation-only commit does not change the running
+application code.
 
 ## The 303 check
 
