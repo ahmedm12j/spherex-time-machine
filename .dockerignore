@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+data/cache/
+data/validation/
+.git/
+.gitignore
+*.log
+README.md
+docs/
+media/
+.audit_tmp/
+data/*.pid

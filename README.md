@@ -196,7 +196,14 @@ python scripts/prewarm.py --frames 8 --rows 18
 
 ## Deployment
 
-### Streamlit Community Cloud (primary)
+Live now: `https://spherex-time-machine.streamlit.app` (Streamlit Community Cloud,
+1 GB RAM limit).
+
+**For 24/7 hosting with 16× the memory** (16 GB RAM, 8 cores, no sleep), this
+repo ships a Dockerfile ready for Hugging Face Spaces Docker SDK. See
+**[deploy/HUGGINGFACE.md](deploy/HUGGINGFACE.md)** for the step-by-step guide.
+
+### Streamlit Community Cloud (current host)
 1. Push this repo to GitHub (public).
 2. Go to https://share.streamlit.io → **New app** → pick the repo.
 3. Main file: `app.py`. Python 3.11. No secrets required — all archive access is anonymous.
@@ -208,7 +215,7 @@ python scripts/prewarm.py --frames 8 --rows 18
 > (which brings the app up at `http://localhost:8501`). The online app is a warmed-up
 > Streamlit Cloud build that shares the same code.
 
-### Docker (fallback, one command)
+### Docker (one command, any host)
 
 > **Prerequisite:** you have Docker installed and running. If you do not, skip this and use
 > Streamlit Cloud (above) or `streamlit run` locally.
@@ -217,6 +224,11 @@ python scripts/prewarm.py --frames 8 --rows 18
 docker build -t spherex-time-machine .
 docker run -p 8501:8501 spherex-time-machine
 ```
+
+The image runs as UID 1000 and listens on port 8501, which is exactly what Hugging Face
+Spaces' Docker SDK expects — the same Dockerfile is used for both. If you run the
+`docker-compose.yml` variant, its named volume over `data/cache` must be owned by that user
+(see the caveats in the Hugging Face guide).
 
 Open <http://localhost:8501>. The container runs the same `app.py`, reads the same
 ingestible IRSA data, and produces the same blink / difference / spectrum UI. It does **not**
