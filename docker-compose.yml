@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    image: spherex-time-machine:latest
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      # Same variable the Dockerfile sets; the volume below makes it survive restarts.
+      SPHEREX_CACHE_DIR: /app/data/cache
+    volumes:
+      - spherex-cache:/app/data/cache
+      - spherex-spectra:/app/data/spectra
+    # Pre-warm the disk cache in the background so the first visitor is not the one
+    # paying for the IRSA downloads. Streamlit starts immediately either way.
+    command: >
+      sh -c "python scripts/prewarm.py --frames 8 > /tmp/prewarm.log 2>&1 &
+             exec streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+             --server.headless=true --browser.gatherUsageStats=false"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+volumes:
+  spherex-cache:
+  spherex-spectra:

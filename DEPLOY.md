@@ -50,6 +50,14 @@ through an external render service.
 No credentials are hardcoded in this repo. The Streamlit Cloud deploy needs only a GitHub PAT
 with `repo` scope, entered as a repository secret — never committed.
 
+## Free hosts other than Community Cloud
+
+Community Cloud keeps no disk between restarts, so every cold start re-downloads its FITS
+cutouts from IRSA. For a host with a persistent disk and more RAM, see **`DEPLOY_FREE.md`**: it
+compares the 2026 free tiers, recommends Oracle Cloud Always Free, and includes the exact VM
+steps. `docker-compose.yml` builds the image with a persistent cache volume and pre-warms it in
+the background on boot.
+
 ## Local fallback
 
 If you do not want to use Streamlit Cloud, you can still run the same app locally:
