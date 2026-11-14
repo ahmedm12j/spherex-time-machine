@@ -344,6 +344,25 @@ def render() -> None:
         return
 
     ra, dec = parsed.ra_deg, parsed.dec_deg
+
+    # Dynamic URL sync — keeps the address bar copy-pasteable. Placed once every
+    # sidebar widget exists and the coordinates parse, so a reader can copy the
+    # URL even when the archive has no coverage for this patch (the early
+    # returns below skip the rest of the page, not this).
+    new_qp = {
+        "ra": f"{ra:.5f}",
+        "dec": f"{dec:.5f}",
+        "fov": f"{fov:.2f}",
+        "mode": mode,
+        "cmap": cmap,
+    }
+    if mode == "single":
+        new_qp["band"] = str(detector)
+    if overlays:
+        new_qp["overlay"] = ",".join(overlays)
+    if dict(st.query_params) != new_qp:
+        st.query_params.update(new_qp)
+
     if target and abs(target["ra_deg"] - ra) < 1e-3 and abs(target["dec_deg"] - dec) < 1e-3:
         title = target["name"]
     else:
@@ -438,22 +457,6 @@ def render() -> None:
         _render_science_notes_body(seq)
 
     _render_footer(result, summary)
-
-    # Dynamic URL sync — keeps the address bar copy-pasteable.
-    new_qp = {
-        "ra": f"{ra:.5f}",
-        "dec": f"{dec:.5f}",
-        "fov": f"{fov:.2f}",
-        "mode": mode,
-        "cmap": cmap,
-    }
-    if mode == "single":
-        new_qp["band"] = str(detector)
-    if overlays:
-        new_qp["overlay"] = ",".join(overlays)
-    if dict(st.query_params) != new_qp:
-        st.query_params.update(new_qp)
-
 
 # --------------------------------------------------------------------- sections
 def _build_markers(seq: pipeline.Sequence, overlays: list[str], ra: float,
