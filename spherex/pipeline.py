@@ -342,15 +342,20 @@ def build_sequence(
                 continue
             loaded.setdefault(obs_id, []).append(cut)
 
+    # Coaddition is the expensive part (a reprojection per detector per epoch), and
+    # it is pure numpy, so run the epochs concurrently instead of one after another.
+    jobs = [(obs_id, loaded[obs_id]) for obs_id, _eps in chosen if loaded.get(obs_id)]
     frames: list[Frame] = []
-    for obs_id, _eps in chosen:
-        cuts = loaded.get(obs_id, [])
-        if not cuts:
-            continue
-        frame = _combine_epoch(cuts, ref, shape)
-        if frame is None:
-            continue
-        frames.append(frame)
+    if jobs:
+        with ThreadPoolExecutor(max_workers=min(4, len(jobs))) as pool:
+            futs = [pool.submit(_combine_epoch, cuts, ref, shape) for _obs, cuts in jobs]
+            for fut in as_completed(futs):
+                try:
+                    frame = fut.result()
+                except Exception:  # noqa: BLE001 - a bad epoch must not kill the sequence
+                    continue
+                if frame is not None:
+                    frames.append(frame)
 
     frames.sort(key=lambda f: f.t_min)
     frames = align_frames(frames)
