@@ -33,6 +33,31 @@ nothing in them is synthetic.
 
 ---
 
+## Related tools & resources
+
+**Tier 1 (core):** NASA/IPAC IRSA — the live SPHEREx data source — and the
+**SPHEREx Tutorial Notebooks**, which are the recommended next step if you want
+to go beyond the web UI. If you are using Python (with Streamlit or standard
+Jupyter Notebooks), these notebooks give you the boilerplate code needed to read,
+parse, and handle real SPHEREx data structures.
+
+**Tier 2 (inspiration and validation):** WiseView — a tool built for a similar
+purpose (blinking historical infrared data from the WISE mission to find faint,
+fast-moving objects like brown dwarfs or planets). Its approach to image
+stretching, frame blinking, and layout is the blueprint for this viewer's front
+end. Gaia DR3 — used to cross-match the infrared field against Gaia's precise
+optical star positions: an object bright in the infrared but missing from Gaia
+is a candidate for a cold, hidden object.
+
+**Tier 3 (skipped):** the challenge's CSA partner resources (NEOSSat, CADC),
+which belong to a different mission and are documented as out of scope.
+
+See **[RESOURCES.md](RESOURCES.md)** for the full tiered list with an explicit
+`Integrated / Cited / Skipped` status for every resource, and the full guidance
+on how to use the Tier 1 and Tier 2 resources.
+
+---
+
 ## Why this matters
 
 Finding moving objects is one of the few parts of astronomy where a human eye still beats

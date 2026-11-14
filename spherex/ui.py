@@ -439,6 +439,21 @@ def render() -> None:
 
     _render_footer(result, summary)
 
+    # Dynamic URL sync — keeps the address bar copy-pasteable.
+    new_qp = {
+        "ra": f"{ra:.5f}",
+        "dec": f"{dec:.5f}",
+        "fov": f"{fov:.2f}",
+        "mode": mode,
+        "cmap": cmap,
+    }
+    if mode == "single":
+        new_qp["band"] = str(detector)
+    if overlays:
+        new_qp["overlay"] = ",".join(overlays)
+    if dict(st.query_params) != new_qp:
+        st.query_params.update(new_qp)
+
 
 # --------------------------------------------------------------------- sections
 def _build_markers(seq: pipeline.Sequence, overlays: list[str], ra: float,
@@ -723,6 +738,14 @@ def _render_discovery(seq: pipeline.Sequence, ra: float, dec: float, fov: float)
     max_shift = c2.slider("Max frame-to-frame shift (px)", 1.0, 8.0, 2.5, 0.5, key="disc_shift",
                           help="Tighter values stop the tracker hopping between unrelated stars.")
 
+    hide_gaia = st.checkbox(
+        "Hide candidates with a Gaia DR3 counterpart",
+        value=False,
+        help="An IR source with a known optical counterpart is a normal star. "
+             "Unchecking this shows every detection, useful for inspection.",
+        key="disc_hide_gaia",
+    )
+
     if st.button("Run discovery scan", type="primary", key="disc_run"):
         with st.spinner("Detecting and chaining sources across epochs…"):
             cands = photometry.detect_movers(seq, max_shift_px=max_shift,
@@ -735,6 +758,29 @@ def _render_discovery(seq: pipeline.Sequence, ra: float, dec: float, fov: float)
                           "Press **Run discovery scan**. On a quiet field you should get a "
                           "handful of low-score candidates; on Barnard's Star the star itself "
                           "should rank near the top."), unsafe_allow_html=True)
+        return
+
+    if hide_gaia:
+        ov = cached_overlay("gaia", ra, dec, max(0.05, fov * 0.05))
+        if not ov.empty:
+            def _has_gaia(c, tol_arcsec=2.0):
+                g_ra = ov.table["ra"].values
+                g_dec = ov.table["dec"].values
+                if not len(g_ra):
+                    return False
+                d = (((g_ra - c.ra) * 3600.0 * np.cos(np.radians(c.dec)))**2
+                     + ((g_dec - c.dec) * 3600.0)**2)
+                return float(np.sqrt(d.min())) < tol_arcsec
+            cands = [c for c in cands if not _has_gaia(c)]
+        st.caption("Candidates with a Gaia DR3 source within 2\u2033 are hidden. "
+                   "What remains is the infrared-only population — including "
+                   "high proper-motion stars and cold brown dwarfs.")
+
+    if not cands:
+        st.markdown(_card("ok", "No infrared-only candidates",
+                          "Every detection has a Gaia DR3 counterpart within 2\u2033, so all of "
+                          "them are known optical stars. Uncheck the Gaia filter to see them."),
+                    unsafe_allow_html=True)
         return
 
     st.markdown(f"##### Top {min(5, len(cands))} candidate movers")
