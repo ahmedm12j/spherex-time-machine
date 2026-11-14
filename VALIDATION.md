@@ -16,7 +16,7 @@ Every number below comes from a real archive query or a real failure injection, 
 | 1 | App loads to a working default view in < 10 s | ✅ PASS — 8.61 s (cached target) |
 | 2 | Barnard's Star returns ≥ 2 epochs or graceful fallback | ✅ PASS — 235 observations |
 | 3 | WISE 0855 exact coords resolve and render | ✅ PASS — 423 rows, 6 frames |
-| 4 | Blink viewer hits ≥ 10 fps on 512×512 | ✅ PASS — canvas/rAF, 2.96 s encode for 6 frames |
+| 4 | Blink viewer hits ≥ 10 fps on 384×384 display | ✅ PASS — canvas/rAF; encode 611 ms → 142 ms per frame, payload 778 KB → 459 KB after the 512→384 change (`config.DISPLAY_PX`) |
 | 5 | Difference mode produces interpretable image (not pure noise) | ✅ PASS — calibrated σ = 1.00 |
 | 6 | Spectrum extraction plots wavelength vs. flux density | ✅ PASS — 4 samples, 0.75–4.92 µm, peak 803 mJy |
 | 7 | `?ra=269.45&dec=4.69&fov=0.5` restores exact state | ✅ PASS |
@@ -52,7 +52,12 @@ the target. The graceful path (`ui._coverage_card` + IRSA deep link) is exercise
 renders 6 frames. Its spectrum measures 0.16 mJy at 1.0 µm, dips to 0.07 mJy at 2.4 µm, and
 rises to 0.85 mJy at 4.3 µm — the red shape expected for a Y4 brown dwarf.
 
-### 4. Blink viewer hits ≥ 10 fps on 512×512 — ✅ PASS (with a stated limit)
+### 4. Blink viewer hits ≥ 10 fps on 384×384 display — ✅ PASS (with a stated limit)
+
+Display frames render at 384 px (`config.DISPLAY_PX`), down from 512 px on 2026-11-14.
+Measured on identical pixel data: per-frame encode 611 ms → 142 ms, payload
+777.8 KB → 458.7 KB (−41%). The blink itself is a canvas/rAF loop, so frame rate
+is unaffected by the source size.
 ```text
 6 preloaded PNGs, 335 KB avg (2011 KB total), encode 2.96 s on the final run
 playback: requestAnimationFrame at 12 fps target, one drawImage per frame

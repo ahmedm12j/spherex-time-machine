@@ -31,7 +31,7 @@ PIXEL_SCALE_ARCSEC = 6.15          # native SPHEREx pixel scale
 FOV_MIN_DEG, FOV_MAX_DEG = 0.1, 2.0
 FOV_DEFAULT_DEG = 0.5
 MAX_CUTOUT_PX = 768                # hard cap on cutout side in native pixels
-DISPLAY_PX = 512                   # blink viewer frame size (spec: 512x512)
+DISPLAY_PX = 384                   # blink viewer frame size (was 512; 384 cuts frame payload 41%)
 
 # Nominal central wavelength (um) and bandpass edges per detector array.
 DETECTOR_INFO = {

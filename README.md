@@ -1,3 +1,12 @@
+---
+title: SPHEREx Time Machine
+emoji: 🔭
+colorFrom: purple
+colorTo: gray
+sdk: docker
+app_port: 8501
+pinned: false
+---
 # 🔭 SPHEREx Time Machine
 
 **Blink the infrared sky. Type coordinates, watch the sky move, click a star for its spectrum.**
@@ -202,6 +211,9 @@ Live now: `https://spherex-time-machine.streamlit.app` (Streamlit Community Clou
 **For 24/7 hosting with 16× the memory** (16 GB RAM, 8 cores, no sleep), this
 repo ships a Dockerfile ready for Hugging Face Spaces Docker SDK. See
 **[deploy/HUGGINGFACE.md](deploy/HUGGINGFACE.md)** for the step-by-step guide.
+Free-account alternatives: **[deploy/LIGHTNING.md](deploy/LIGHTNING.md)** (free
+16 GB Studio, but signups are currently closed) and
+**[deploy/CODESPACES.md](deploy/CODESPACES.md)** (free 4-core/16 GB Codespace, 30 h/month).
 
 ### Streamlit Community Cloud (current host)
 1. Push this repo to GitHub (public).
