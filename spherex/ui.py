@@ -137,7 +137,9 @@ def _image_grid(png_b64: str, caption: str) -> None:
     from PIL import Image
 
     raw = base64.b64decode(png_b64)
-    st.image(Image.open(io.BytesIO(raw)), caption=caption, use_container_width=True)
+    # st.image only gained use_container_width in Streamlit 1.40; requirements.txt
+    # pins 1.39.0, where use_column_width is the supported argument.
+    st.image(Image.open(io.BytesIO(raw)), caption=caption, use_column_width=True)
 
 
 # ------------------------------------------------------------------ state setup
