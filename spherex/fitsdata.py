@@ -243,6 +243,41 @@ def load_cutout(
     if not url:
         return None
     tag = "z" if want_zodi else "n"
+
+    # Prefer a cached cutout on disk before touching the network. The cache path
+    # depends on the cutout bounds, which come from the FITS structure, so try
+    # the on-disk structure cache first (no network) and only fall back to a
+    # live parse_structure (network) when that misses.
+    structure = None
+    if use_disk_cache:
+        try:
+            structure = rangecut._load_structure(url)
+        except Exception:
+            structure = None
+    if structure is not None:
+        try:
+            img_info = structure.get("IMAGE")
+            wcs = WCS(img_info.header)
+            ny_total = int(img_info.header.get("NAXIS2", 2040))
+            nx_total = int(img_info.header.get("NAXIS1", 2040))
+            xc, yc = wcs.all_world2pix([[ra, dec]], 0)[0]
+            pix = float(epoch.pixscale or config.PIXEL_SCALE_ARCSEC)
+            n = int(round(fov_deg * 3600.0 / pix))
+            n = max(24, min(n, config.MAX_CUTOUT_PX))
+            x0 = int(round(xc - n / 2))
+            y0 = int(round(yc - n / 2))
+            x0 = max(0, min(x0, nx_total - n))
+            y0 = max(0, min(y0, ny_total - n))
+            x1, y1 = x0 + n, y0 + n
+            bounds = (y0, y1, x0, x1)
+            cpath = _cache_path(epoch, bounds, tag)
+            if cpath.exists():
+                cached = _read_cached(cpath, epoch)
+                if cached is not None:
+                    return cached
+        except Exception:
+            structure = None
+
     try:
         structure = rangecut.parse_structure(url)
     except Exception:

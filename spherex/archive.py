@@ -158,6 +158,12 @@ def _rows_to_epochs(df: pd.DataFrame, collection: str) -> list[Epoch]:
     for _, row in df.iterrows():
         url = str(row.get("access_url", "") or "")
         aws = _aws_from_cloud_access(str(row.get("cloud_access", "") or ""))
+        # TAP's cloud_access is whitespace for every row, so epochs without a usable
+        # AWS URL can never be fetched (access_url is an IRSA datalink resolver,
+        # not a FITS file). Drop them so the UI shows an honest coverage card
+        # instead of "epochs exist but no cutout was usable".
+        if not aws:
+            continue
         if not url and not aws:
             continue
         det = _detector_of(row)
@@ -266,7 +272,8 @@ def get_epochs(
         entry = cache[key]
         if time.time() - entry.get("t", 0) < _CACHE_TTL:
             epochs = [Epoch(**e) for e in entry.get("epochs", [])]
-            if epochs:
+            # Invalidate stale entries that were cached before the aws_url filter.
+            if epochs and all(getattr(e, "aws_url", "") for e in epochs):
                 return QueryResult(epochs=epochs, source="disk cache", ok=True, n_rows=len(epochs))
 
     result = query_sia(ra, dec, radius)

@@ -21,9 +21,12 @@ import streamlit.components.v1 as components
 
 from . import archive, blink, catalogs, config, coords, fitsdata, photometry, pipeline
 
+
+
 DEMO_DIR = config.ROOT / "data" / "demo"
 SPECTRA_DIR = config.ROOT / "data" / "spectra"
 TARGETS = config.load_targets()
+VALID_TARGETS = frozenset(["Custom coordinates"] + [t["name"] for t in TARGETS])
 
 CSS = """
 <style>
@@ -150,7 +153,11 @@ def _bootstrap_state() -> None:
     else:
         st.session_state["ra_in"] = str(config.DEFAULT_TARGET["ra_deg"])
         st.session_state["dec_in"] = str(config.DEFAULT_TARGET["dec_deg"])
-    st.session_state["target_pick"] = _qp("target", "Barnard's Star")
+    target_qp = _qp("target")
+    if target_qp and target_qp in VALID_TARGETS:
+        st.session_state["target_pick"] = target_qp
+    else:
+        st.session_state["target_pick"] = config.DEFAULT_TARGET["name"]
     try:
         st.session_state["fov_in"] = float(_qp("fov", str(config.FOV_DEFAULT_DEG)))
     except ValueError:
@@ -177,6 +184,8 @@ def _on_target_change() -> None:
     if t:
         st.session_state["ra_in"] = t["ra_text"]
         st.session_state["dec_in"] = t["dec_text"]
+    # A target change invalidates any previously built share URL.
+    st.session_state.pop("share_url", None)
 
 
 # ------------------------------------------------------------------- data access
@@ -240,6 +249,18 @@ def _demo_frame(ra: float, dec: float) -> bool:
 def render() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     _bootstrap_state()
+    # Apply any target change requested by the guided-tour button on the previous run.
+    # (Setting session_state["target_pick"] directly after the selectbox is instantiated
+    # raises StreamlitAPIException, so we defer it to here, before the widget exists.)
+    if st.session_state.get("_tour_target"):
+        _name = st.session_state.pop("_tour_target")
+        if _name in VALID_TARGETS:
+            st.session_state["target_pick"] = _name
+            _t = _target_by_name(_name)
+            if _t:
+                st.session_state["ra_in"] = _t["ra_text"]
+                st.session_state["dec_in"] = _t["dec_text"]
+        # An unknown tour target is ignored rather than forced into the selectbox.
 
     # ---------------------------------------------------------------- sidebar
     with st.sidebar:
@@ -247,10 +268,7 @@ def render() -> None:
         st.caption("Blink the infrared sky · real IRSA data")
         names = ["Custom coordinates"] + [t["name"] for t in TARGETS]
         pick = st.selectbox(
-            "Test target", names,
-            index=names.index(st.session_state["target_pick"])
-            if st.session_state.get("target_pick") in names else 0,
-            key="target_pick", on_change=_on_target_change,
+            "Test target", names, key="target_pick", on_change=_on_target_change,
         )
         target = _target_by_name(pick)
         if target:
@@ -312,8 +330,7 @@ def render() -> None:
         st.divider()
         if st.button("▶ 20-second guided tour", use_container_width=True):
             st.session_state["tour_step"] = 0
-            st.session_state["target_pick"] = "Barnard's Star"
-            _on_target_change()
+            st.session_state["_tour_target"] = "Barnard's Star"
             st.rerun()
 
     # ------------------------------------------------------------ parse coords
@@ -327,7 +344,10 @@ def render() -> None:
         return
 
     ra, dec = parsed.ra_deg, parsed.dec_deg
-    title = target["name"] if target else "Custom sky patch"
+    if target and abs(target["ra_deg"] - ra) < 1e-3 and abs(target["dec_deg"] - dec) < 1e-3:
+        title = target["name"]
+    else:
+        title = "Custom sky patch"
 
     # ----------------------------------------------------------------- header
     st.markdown(
