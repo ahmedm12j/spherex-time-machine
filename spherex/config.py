@@ -124,6 +124,12 @@ DEFAULT_TARGET = {
 CACHE_DIR = Path(os.environ.get("SPHEREX_CACHE_DIR", ROOT / "data" / "cache"))
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+# Read-only snapshot of real IRSA SIA2 rows that ships with the repository.
+# Streamlit Community Cloud starts with an empty cache, so this is what keeps the
+# deployed app showing real multi-epoch data while IRSA's metadata is unreachable.
+# Regenerate with: python scripts/snapshot_index.py
+SNAPSHOT_PATH = Path(os.environ.get("SPHEREX_SNAPSHOT", ROOT / "data" / "snapshot" / "epochs.json"))
+
 HTTP_TIMEOUT = float(os.environ.get("SPHEREX_HTTP_TIMEOUT", "25"))
 HTTP_RETRIES = 2
 

@@ -1,12 +1,12 @@
 {
-  "generated": "2026-11-08T07:19:59Z",
+  "generated": "2026-11-12T18:09:38Z",
   "passed": 11,
   "total": 12,
   "results": [
     {
       "item": "App loads to a working default view in < 10 s",
       "ok": true,
-      "detail": "6 frames: warm rebuild 7.42s + PNG encode 1.19s = 8.61s (cached target); cold first build 16.2s on this link (disk cache). Budget is defined for a cached target.",
+      "detail": "6 frames: warm rebuild 5.30s + PNG encode 0.55s = 5.85s (cached target); cold first build 11.8s on this link (disk cache). Budget is defined for a cached target.",
       "method": "live"
     },
     {
@@ -24,7 +24,7 @@
     {
       "item": "Blink viewer hits >= 10 fps on 512x512",
       "ok": true,
-      "detail": "frame budget at 512x512: 6 preloaded PNGs, 335 KB avg (2011 KB total), encode 2.96s; playback is requestAnimationFrame at 12 fps target with one drawImage per frame (canvas, no Streamlit rerun). Browser-measured fps is not verifiable headless \u2014 see VALIDATION.md",
+      "detail": "frame budget at 512x512: 6 preloaded PNGs, 335 KB avg (2011 KB total), encode 0.26s; playback is requestAnimationFrame at 12 fps target with one drawImage per frame (canvas, no Streamlit rerun). Browser-measured fps is not verifiable headless \u2014 see VALIDATION.md",
       "method": "static+timing"
     },
     {
@@ -48,7 +48,7 @@
     {
       "item": "Flags masked or displayed in metadata panel",
       "ok": true,
-      "detail": "flag classes present: ['SOURCE', 'PERSIST', 'HALO', 'TRANSIENT', 'NONFUNC']; 3.78% of cutout pixels masked; counts shown in the metadata panel",
+      "detail": "flag classes present: ['SOURCE', 'HALO', 'TRANSIENT', 'SUR_ERROR', 'NONFUNC']; 1.19% of cutout pixels masked; counts shown in the metadata panel",
       "method": "live"
     },
     {
@@ -66,7 +66,7 @@
     {
       "item": "README setup instructions exist and are complete",
       "ok": true,
-      "detail": "README.md present (16326 bytes) with copy-paste setup, deploy and Docker sections",
+      "detail": "README.md present (16423 bytes) with copy-paste setup, deploy and Docker sections",
       "method": "file"
     },
     {

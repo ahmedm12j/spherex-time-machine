@@ -373,7 +373,7 @@ def render() -> None:
     # ----------------------------------------------------------------- header
     st.markdown(
         f'<div class="stm-title">SPHEREx Time Machine</div>'
-        f'<div class="stm-sub"><span class="stm-pill">live IRSA</span>'
+        f'<div class="stm-sub"><span class="stm-pill">real IRSA data</span>'
         f'<span class="stm-pill">{config.N_TOTAL_BANDS} bands</span>'
         f'<span class="stm-pill">0.75–5.0 µm</span>'
         f'{title} · RA {parsed.ra_hms} · Dec {parsed.dec_dms} · FOV {fov:.2f}°</div>',
@@ -389,9 +389,11 @@ def render() -> None:
     if result.empty:
         if not result.ok:
             st.markdown(_card(
-                "err", "Archive busy",
-                "IRSA did not answer after two retries with exponential backoff. This is usually "
-                "temporary load on the archive, not a problem with your query."),
+                "err", "Archive unreachable",
+                "IRSA's metadata services are not answering, and this position is not in the "
+                "epoch index bundled with the app, so there is nothing real to blink yet. "
+                "This is normally temporary load on the archive - pick one of the demo "
+                "targets, or retry in a few minutes."),
                 unsafe_allow_html=True)
             if result.message:
                 st.caption(f"Diagnostics: {result.message}")
@@ -440,7 +442,9 @@ def render() -> None:
             scrolling=False,
         )
         st.caption(f"{len(seq.frames)} epochs · {seq.pixel_scale_arcsec:.2f}\"/pixel · "
-                   f"{summary['n_obs']} archive rows · source: {result.source}")
+                   f"{summary['n_obs']} archive rows · epoch list: {result.source}"
+                   + (f" ({result.as_of})" if result.as_of else "")
+                   + " · pixels: NASA AWS, live")
 
     with right:
         _render_metadata(seq, summary, mode, detector)
