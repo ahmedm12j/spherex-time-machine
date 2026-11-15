@@ -11,7 +11,7 @@ pinned: false
 
 **Blink the infrared sky. Type coordinates, watch the sky move, click a star for its spectrum.**
 
-**Live demo:** <https://spherex-time-machine.streamlit.app> — no login, works on mobile.
+**Live web tool:** <https://spherex-time-machine.streamlit.app> — no login, works on mobile.
 
 A public, login-free web tool that streams real NASA SPHEREx Level-2 data from IRSA,
 aligns every epoch onto one grid, and blinks them like a flipbook so moving objects
